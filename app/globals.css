@@ -1,6 +1,7 @@
 @font-face {
   font-family: 'Galmuri11';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.0/Galmuri11.woff') format('woff');
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.1/Galmuri11.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.1/Galmuri11.woff') format('woff');
   font-weight: normal;
   font-style: normal;
   unicode-range: U+0000-00FF, U+1100-11FF, U+3000-303F, U+3130-318F, U+AC00-D7A3;

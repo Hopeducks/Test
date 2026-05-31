@@ -190,11 +190,12 @@ export interface PlayerDashboardEntry {
 }
 
 export interface DashboardEvent {
-  type: 'card_unlocked' | 'battle_start' | 'battle_end' | 'boss_damage' | 'achievement'
+  type: 'card_unlocked' | 'battle_start' | 'battle_end' | 'boss_damage' | 'achievement' | 'quiz_answer' | 'player_join'
   playerId: string
   nickname: string
   detail: string
   timestamp: string
+  isCorrect?: boolean
 }
 
 // ── 하위 호환성용 정의 (기존 UI 및 퀴즈 컴포넌트용) ─────────────────────────

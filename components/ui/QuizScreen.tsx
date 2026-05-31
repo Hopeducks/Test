@@ -222,9 +222,10 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     return () => window.removeEventListener('react:cardLevelUp', handleLevelUp);
   }, []);
 
-  // Standard Quiz Timer
-  const [timeLeft, setTimeLeft] = useState(30);
-  const [totalTime] = useState(30);
+  // Standard Quiz Timer — 교사 설정값 우선, 기본 30초
+  const configuredTimer = classroomSession?.settings?.timerSeconds ?? 30;
+  const [timeLeft, setTimeLeft] = useState(configuredTimer);
+  const [totalTime] = useState(configuredTimer);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Screen Flash Feedback
@@ -324,16 +325,19 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     cardUnlocked?: string
   ) => {
     const sessionCode = classroomSession?.code;
-    if (!sessionCode) return;
+    if (!sessionCode || !player) return;
     const channel = supabase.channel(`dashboard_events_${sessionCode}`);
     channel.send({
       type: 'broadcast',
-      event: 'quiz_answer',
+      event: 'dashboard_log',
       payload: {
         type: 'quiz_answer',
-        playerId: player?.id ?? '',
-        questionId,
+        playerId: player.id,
+        nickname: player.nickname,
         isCorrect,
+        detail: isCorrect
+          ? `정답! ${cardUnlocked ? `[${cards.find(c => c.id === cardUnlocked)?.name ?? cardUnlocked}] 카드 획득!` : ''}`
+          : '오답',
         cardUnlocked: cardUnlocked ?? null,
         timestamp: Date.now(),
       },
@@ -504,17 +508,27 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     return 120;
   };
 
+  const getBallCatchRate = (ballType: string): number => {
+    if (ballType === 'masterBall') return 1.0;
+    if (ballType === 'ultraBall') return 0.85;
+    if (ballType === 'superBall') return 0.70;
+    return 0.50; // monsterBall
+  };
+
   const triggerCaptureAction = async () => {
     if (captureStatus !== 'aiming' || !captureCardId) return;
 
     if (captureAnimRef.current) cancelAnimationFrame(captureAnimRef.current);
-    
+
     // Capture point/marker is in the center of the track (400px)
     const targetPoint = 400;
     const ballWidth = getBallWidth(selectedBallType);
-    
-    // Check if 400px falls inside the current greenZone range: [left, left + ballWidth]
-    const isSuccess = targetPoint >= greenZoneLeft && targetPoint <= (greenZoneLeft + ballWidth);
+
+    // 위치 판정: 400px가 CATCH ZONE 안에 있는지
+    const inZone = targetPoint >= greenZoneLeft && targetPoint <= (greenZoneLeft + ballWidth);
+    // 확률 판정: 볼 종류별 성공 확률 추가 적용
+    const catchRate = getBallCatchRate(selectedBallType);
+    const isSuccess = inZone && Math.random() < catchRate;
 
     if (isSuccess) {
       gameAudio.playCatchSuccess();

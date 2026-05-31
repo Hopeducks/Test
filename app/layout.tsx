@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   description: '2022 개정 교육과정 기반 초등학교 5학년 과학 전체 단원 복습 퀴즈 및 도감 수집 게임. 교실 빔프로젝터 및 태블릿 호환.',
   keywords: ['초등과학', '5학년과학', '2022개정교육과정', '과학복습', '과학게임', '포켓몬도감', '교육웹앱'],
   authors: [{ name: 'Antigravity AI' }],
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   other: {
     'darkreader-lock': 'true',
   },

@@ -155,11 +155,11 @@ export default function TeacherDashboard({
           playerId: payload.playerId || 'unknown',
           nickname: payload.nickname || '익명',
           detail: payload.detail || '',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isCorrect: payload.isCorrect,
         };
-        setFeedEvents(prev => [...prev.slice(-49), newEvent]); // Keep last 50 events
-        
-        // Refresh local student scores if answer is logged
+        setFeedEvents(prev => [...prev.slice(-49), newEvent]);
+
         if (payload.type === 'quiz_answer') {
           triggerScoreRefresh(payload.nickname, payload.isCorrect);
         }
@@ -1125,13 +1125,31 @@ export default function TeacherDashboard({
                   NO RECENT LOGGED EVENTS
                 </div>
               ) : (
-                filteredEvents.map((evt, idx) => (
-                  <div key={idx} className="border-b border-gray-900/60 pb-1.5 text-[11px] leading-relaxed">
-                    <span className="text-gray-500 font-mono mr-1.5">[{new Date(evt.timestamp).toLocaleTimeString()}]</span>
-                    <span className="text-cyan-400 font-bold mr-1.5">{evt.nickname}</span>
-                    <span className="text-gray-300">{evt.detail}</span>
-                  </div>
-                ))
+                filteredEvents.map((evt, idx) => {
+                  const icon =
+                    evt.type === 'quiz_answer'
+                      ? evt.isCorrect !== false ? '✅' : '❌'
+                      : evt.type === 'card_unlocked' ? '🃏'
+                      : evt.type === 'battle_start' ? '⚔️'
+                      : evt.type === 'battle_end' ? '🏆'
+                      : evt.type === 'boss_damage' ? '💥'
+                      : evt.type === 'player_join' ? '👤'
+                      : '📌';
+                  const nickColor =
+                    evt.type === 'quiz_answer'
+                      ? (evt.isCorrect !== false ? 'text-emerald-400' : 'text-red-400')
+                      : 'text-cyan-400';
+                  return (
+                    <div key={idx} className="border-b border-gray-900/60 pb-1.5 text-[11px] leading-relaxed flex items-start gap-1.5">
+                      <span className="shrink-0 text-xs">{icon}</span>
+                      <div>
+                        <span className="text-gray-500 font-mono mr-1">[{new Date(evt.timestamp).toLocaleTimeString()}]</span>
+                        <span className={`font-bold mr-1 ${nickColor}`}>{evt.nickname}</span>
+                        <span className="text-gray-300">{evt.detail}</span>
+                      </div>
+                    </div>
+                  );
+                })
               )}
               <div ref={feedEndRef} />
             </div>
@@ -1164,6 +1182,39 @@ export default function TeacherDashboard({
                     <option key={id} value={id}>{id}단원. {getUnitTitle(id)}</option>
                   ))}
                 </select>
+
+                {/* 타이머 시간 설정 */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-mono text-gray-500">문제당 제한 시간</label>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[10, 20, 30, 60].map(sec => {
+                      const current = classroomSession.settings?.timerSeconds ?? 30;
+                      const isActive = current === sec;
+                      return (
+                        <button
+                          key={sec}
+                          onClick={() => {
+                            gameAudio.playClick();
+                            const updated = {
+                              ...classroomSession,
+                              settings: { ...(classroomSession.settings ?? {}), timerSeconds: sec, timer: true, battleModeEnabled: false, raidEnabled: false, allowChat: true }
+                            };
+                            setClassroomSession(updated as any);
+                            const ch = supabase.channel(`dashboard_events_${sessionCode}`);
+                            ch.send({ type: 'broadcast', event: 'settings_update', payload: { timerSeconds: sec } });
+                          }}
+                          className={`py-1 text-[10px] font-bold rounded border transition-all ${
+                            isActive
+                              ? 'bg-cyan-950/40 border-cyan-400 text-cyan-300'
+                              : 'bg-gray-950 border-gray-800 text-gray-500 hover:text-gray-300 hover:border-gray-700'
+                          }`}
+                        >
+                          {sec}s
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {classroomSession.status === 'playing' ? (
                   <button
