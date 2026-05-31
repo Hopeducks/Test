@@ -18,6 +18,7 @@ import { cards } from '../data/cards';
 import { supabase } from '../lib/supabase-client';
 import LegendaryAnnouncement from '../components/ui/LegendaryAnnouncement';
 import MyPage from '../components/ui/MyPage';
+import Leaderboard from '../components/ui/Leaderboard';
 
 export default function Home() {
   const { 
@@ -59,7 +60,7 @@ export default function Home() {
   };
 
   // Screen Routing State
-  const [activeScreen, setActiveScreen] = useState<'home' | 'pokedex' | 'quiz' | 'complete' | 'lobby' | 'battle' | 'raid' | 'mypage'>('home');
+  const [activeScreen, setActiveScreen] = useState<'home' | 'pokedex' | 'quiz' | 'complete' | 'lobby' | 'battle' | 'raid' | 'mypage' | 'leaderboard'>('home');
   const [selectedUnitId, setSelectedUnitId] = useState<number>(1);
   const [player, setPlayer] = useState<Player | null>(null);
 
@@ -302,11 +303,18 @@ export default function Home() {
                 onViewMyPage={() => {
                   setActiveScreen('mypage');
                 }}
+                onViewLeaderboard={() => {
+                  setActiveScreen('leaderboard');
+                }}
               />
             )}
 
             {activeScreen === 'mypage' && (
               <MyPage onBack={() => setActiveScreen('home')} />
+            )}
+
+            {activeScreen === 'leaderboard' && (
+              <Leaderboard onBack={() => setActiveScreen('home')} />
             )}
 
             {activeScreen === 'lobby' && (

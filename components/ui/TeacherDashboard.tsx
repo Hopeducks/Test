@@ -1368,6 +1368,45 @@ export default function TeacherDashboard({
       ) : (
         /* 📊 HISTORICAL/LIVE ACADEMIC ANALYSIS TAB */
         <div className="space-y-6">
+
+          {/* 세션 랭킹 */}
+          <div className="glass-panel p-5 border-amber-500/10">
+            <h3 className="text-sm font-extrabold text-amber-400 border-b border-gray-900 pb-2 mb-4 uppercase tracking-widest flex items-center gap-2">
+              <Trophy className="w-4 h-4" /> 세션 내 학생 랭킹
+            </h3>
+            <div className="space-y-2">
+              {[...classroomSession.students]
+                .map(s => ({
+                  name: s.name,
+                  avatar: s.avatar,
+                  cards: (s as any).unlockedCardsCount ?? 0,
+                  score: s.currentScore ?? 0,
+                  completedUnits: ((s as any).completedUnits ?? []).length,
+                }))
+                .sort((a, b) => b.cards !== a.cards ? b.cards - a.cards : b.score - a.score)
+                .map((s, idx) => (
+                  <div key={s.name} className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-xs ${
+                    idx === 0 ? 'border-amber-500/30 bg-amber-950/10' :
+                    idx === 1 ? 'border-gray-600/30 bg-gray-900/30' :
+                    idx === 2 ? 'border-amber-800/30 bg-amber-950/5' :
+                    'border-gray-900 bg-gray-950/20'
+                  }`}>
+                    <span className="w-6 text-center font-black shrink-0 text-sm">
+                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                    </span>
+                    <span className="text-lg shrink-0">{s.avatar}</span>
+                    <span className="flex-1 font-bold text-gray-200 truncate">{s.name}</span>
+                    <span className="text-purple-400 font-bold">{s.cards}장</span>
+                    <span className="text-emerald-400 font-bold">{s.score}점</span>
+                  </div>
+                ))
+              }
+              {classroomSession.students.length === 0 && (
+                <p className="text-xs text-gray-600 font-mono text-center py-4">접속된 학생이 없습니다.</p>
+              )}
+            </div>
+          </div>
+
           {/* AI 진단 피드백 환류자료 (AI Analysis Summary Block) */}
           <div className="glass-panel p-6 border-cyan-500/20 bg-gradient-to-r from-cyan-950/20 to-transparent">
             <h3 className="text-base font-extrabold text-cyan-400 border-b border-gray-900 pb-3 mb-4 uppercase tracking-widest flex items-center gap-2">

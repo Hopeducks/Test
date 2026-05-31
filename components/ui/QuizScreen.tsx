@@ -225,8 +225,25 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
   // Standard Quiz Timer — 교사 설정값 우선, 기본 30초
   const configuredTimer = classroomSession?.settings?.timerSeconds ?? 30;
   const [timeLeft, setTimeLeft] = useState(configuredTimer);
-  const [totalTime] = useState(configuredTimer);
+  const [totalTime, setTotalTime] = React.useState(configuredTimer);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 교사가 settings_update 브로드캐스트로 타이머 변경 시 다음 문제부터 반영
+  useEffect(() => {
+    const sessionCode = classroomSession?.code;
+    if (!sessionCode) return;
+    const ch = supabase.channel(`settings_listen_${sessionCode}`);
+    ch.on('broadcast', { event: 'settings_update' }, ({ payload }: { payload: any }) => {
+      if (typeof payload?.timerSeconds === 'number') {
+        setTotalTime(payload.timerSeconds);
+        setClassroomSession({
+          ...classroomSession,
+          settings: { ...(classroomSession?.settings ?? { timer: true, timerSeconds: 30, battleModeEnabled: false, raidEnabled: false, allowChat: true }), timerSeconds: payload.timerSeconds }
+        });
+      }
+    }).subscribe();
+    return () => { ch.unsubscribe(); };
+  }, [classroomSession?.code]);
 
   // Screen Flash Feedback
   const [flashType, setFlashType] = useState<'correct' | 'wrong' | null>(null);

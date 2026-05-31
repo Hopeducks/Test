@@ -21,6 +21,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@media print {
+  body { background: white !important; color: black !important; }
+  .print\:hidden { display: none !important; }
+  .glass-panel { border: 1px solid #ccc !important; background: white !important; box-shadow: none !important; }
+  header, footer, nav { display: none !important; }
+  .projector-scanlines::after { display: none !important; }
+}
+
 @layer base {
   :root {
     --bg-dark-deep: #eff6ff;

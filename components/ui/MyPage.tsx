@@ -3,7 +3,8 @@
 import React from 'react';
 import { useGameState } from '../../lib/game-state';
 import { cards } from '../../data/cards';
-import { ArrowLeft, BookOpen, Star, Award, TrendingUp } from 'lucide-react';
+import { questions } from '../../data/questions';
+import { ArrowLeft, BookOpen, Star, Printer, AlertCircle, CheckCircle } from 'lucide-react';
 
 const UNITS = [
   { id: 1, title: '지층과 화석', icon: '🪨' },
@@ -21,8 +22,8 @@ interface MyPageProps {
 }
 
 export default function MyPage({ onBack }: MyPageProps) {
-  const { progress, studentName, studentAvatar } = useGameState();
-  const { unlockedCardIds, completedUnits, unitHighScores, coins, trainerXp } = progress;
+  const { progress, studentName, studentAvatar, removeWrongAnswer } = useGameState();
+  const { unlockedCardIds, completedUnits, unitHighScores, coins, trainerXp, wrongAnswers } = progress;
 
   const totalCards = 80;
   const xp = trainerXp ?? 0;
@@ -35,11 +36,20 @@ export default function MyPage({ onBack }: MyPageProps) {
     .map(id => cards.find(c => c.id === id))
     .filter(Boolean) as typeof cards;
 
+  const wrongQuestions = (wrongAnswers ?? [])
+    .slice(0, 10)
+    .map(id => questions.find(q => q.id === id))
+    .filter(Boolean);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-8 animate-slide-up space-y-6">
 
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 print:hidden">
         <button
           onClick={onBack}
           className="p-2 rounded-lg border border-gray-800 bg-gray-950 text-gray-400 hover:text-white hover:border-gray-700 transition-all"
@@ -47,6 +57,17 @@ export default function MyPage({ onBack }: MyPageProps) {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <h1 className="text-2xl font-black text-cyan-400 tracking-wide">내 학습 기록</h1>
+        <button
+          onClick={handlePrint}
+          className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-gray-900 border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white text-xs font-bold rounded-lg transition-all"
+        >
+          <Printer className="w-3.5 h-3.5" /> 학부모 리포트 출력
+        </button>
+      </div>
+      {/* Print header (only visible when printing) */}
+      <div className="hidden print:block print:mb-4">
+        <h1 className="text-2xl font-black">과학 마스터 도감 — 학습 리포트</h1>
+        <p className="text-sm text-gray-600">학생명: {studentName || '(미설정)'} | 출력일: {new Date().toLocaleDateString('ko-KR')}</p>
       </div>
 
       {/* Profile Card */}
@@ -162,10 +183,45 @@ export default function MyPage({ onBack }: MyPageProps) {
         </div>
       )}
 
+      {/* Wrong Answer Notes */}
+      {wrongQuestions.length > 0 && (
+        <div className="glass-panel p-5 border-red-500/10 space-y-4 print:border print:border-gray-300">
+          <h3 className="text-sm font-extrabold text-red-400 uppercase tracking-widest flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" /> 오답 노트 ({wrongQuestions.length}문항)
+          </h3>
+          <div className="space-y-3">
+            {wrongQuestions.map((q) => {
+              if (!q) return null;
+              return (
+                <div key={q.id} className="bg-gray-950/60 border border-red-900/30 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-bold text-white leading-relaxed">{q.question}</p>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-emerald-300">{q.options[q.correctIndex]}</p>
+                  </div>
+                  {q.explanation && (
+                    <p className="text-[10px] text-gray-500 leading-relaxed">{q.explanation}</p>
+                  )}
+                  <button
+                    onClick={() => removeWrongAnswer(q.id)}
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300 border border-red-900/40 hover:border-red-500/40 px-2 py-0.5 rounded transition-all print:hidden"
+                  >
+                    학습 완료 ✓
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {(wrongAnswers?.length ?? 0) > 10 && (
+            <p className="text-[10px] font-mono text-gray-600">+{(wrongAnswers?.length ?? 0) - 10}개 문항이 더 있습니다.</p>
+          )}
+        </div>
+      )}
+
       {/* Back button */}
       <button
         onClick={onBack}
-        className="w-full py-3 bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-300 hover:text-white font-bold rounded-xl transition-all"
+        className="w-full py-3 bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-300 hover:text-white font-bold rounded-xl transition-all print:hidden"
       >
         ← 홈으로 돌아가기
       </button>

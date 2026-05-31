@@ -4,12 +4,13 @@ import React from 'react';
 import { useGameState } from '../lib/game-state';
 import { cards } from '../data/cards';
 import { gameAudio } from '../lib/audio';
-import { Award, BookOpen, ChevronRight, Play, User } from 'lucide-react';
+import { Award, BookOpen, ChevronRight, Play, User, Trophy } from 'lucide-react';
 
 interface PokedexHomeProps {
   onSelectUnit: (unitId: number) => void;
   onViewPokedex: () => void;
   onViewMyPage?: () => void;
+  onViewLeaderboard?: () => void;
 }
 
 export const UNITS = [
@@ -23,7 +24,7 @@ export const UNITS = [
   { id: 8, title: '산과 염기', subtitle: 'Acids and Bases', icon: '💧' },
 ];
 
-export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage }: PokedexHomeProps) {
+export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage, onViewLeaderboard }: PokedexHomeProps) {
   const { progress } = useGameState();
   const { unlockedCardIds, unitHighScores } = progress;
 
@@ -82,6 +83,15 @@ export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage 
             >
               <User className="w-4 h-4" />
               내 학습 기록
+            </button>
+          )}
+          {onViewLeaderboard && (
+            <button
+              onClick={() => { gameAudio.playClick(); onViewLeaderboard(); }}
+              className="flex items-center gap-2 px-5 py-3 bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 hover:bg-amber-950/70 text-amber-300 hover:text-white font-bold rounded-lg transition-all text-sm touch-target"
+            >
+              <Trophy className="w-4 h-4" />
+              랭킹
             </button>
           )}
           <button
