@@ -1,0 +1,39 @@
+# ─── 환경 변수 & 시크릿 ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+secrets.*.json
+
+# ─── Next.js 빌드 결과물 ────────────────────────────────────────
+.next/
+out/
+build/
+
+# ─── 의존성 ────────────────────────────────────────────────────
+node_modules/
+
+# ─── OS / IDE ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+
+# ─── 로그 ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── 타입스크립트 캐시 ──────────────────────────────────────────
+tsconfig.tsbuildinfo
+
+# ─── 배포 키 (Vercel / Supabase) ────────────────────────────────
+.vercel/
+supabase/.temp/
+supabase/config.toml.local
