@@ -317,9 +317,32 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     }, 800);
   };
 
+  // ── 교사 대시보드 실시간 이벤트 송신 헬퍼 ──────────────────
+  const broadcastQuizAnswer = (
+    questionId: string,
+    isCorrect: boolean,
+    cardUnlocked?: string
+  ) => {
+    const sessionCode = classroomSession?.code;
+    if (!sessionCode) return;
+    const channel = supabase.channel(`dashboard_events_${sessionCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'quiz_answer',
+      payload: {
+        type: 'quiz_answer',
+        playerId: player?.id ?? '',
+        questionId,
+        isCorrect,
+        cardUnlocked: cardUnlocked ?? null,
+        timestamp: Date.now(),
+      },
+    });
+  };
+
   const handleOptionClick = async (optionIndex: number) => {
     if (isAnswered || loading || !player) return;
-    
+
     // Stop Timer
     if (timerRef.current) clearInterval(timerRef.current);
 
@@ -331,9 +354,12 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     try {
       // Call submitQuizAnswer Edge Function via Supabase Mock client
       const response = await submitQuizAnswer(player.id, currentQuestion.id, optionIndex);
-      
+
       setIsAnswered(true);
       setLoading(false);
+
+      // ── 교사 대시보드로 퀴즈 정답 이벤트 Broadcast ──
+      broadcastQuizAnswer(currentQuestion.id, response.correct, response.cardUnlocked);
 
       if (response.correct) {
         setScore(prev => prev + 1);

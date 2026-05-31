@@ -8,6 +8,8 @@ import { costumeCatalog } from '../../data/costume-catalog';
 import { gameAudio } from '../../lib/audio';
 import { RenderAvatarPreview } from '../AvatarCustomizer';
 import { supabase } from '../../lib/supabase-client';
+
+const IS_SUPABASE_CONFIGURED = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 import { 
   Swords, 
   Shield, 
@@ -188,6 +190,9 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
   const [battleOutcome, setBattleOutcome] = useState<'victory' | 'defeat' | 'draw'>('victory');
   const [awardedCoins, setAwardedCoins] = useState(0);
 
+  // ── 배틀 Supabase 채널 ref ─────────────────────────────
+  const battleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   // 10 strongest cards unlocked by player
   const top10UnlockedCards = useMemo(() => {
     const unlocked = cards.filter(c => progress.unlockedCardIds.includes(c.id));
@@ -211,6 +216,85 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
       b => (b.player1 === studentName || b.player2 === studentName) && b.status === 'fighting'
     );
   }, [classroomSession, studentName]);
+
+  // ── 배틀 채널 구독 / 해제 ─────────────────────────────
+  useEffect(() => {
+    const sessionCode = classroomSession?.code;
+    if (!sessionCode || isAI) return; // AI 배틀에는 채널 불필요
+
+    const channelId = `battle_session_${sessionCode}`;
+    const channel = supabase.channel(channelId);
+    battleChannelRef.current = channel;
+
+    channel
+      .on('broadcast', { event: 'battle_card_selected' }, ({ payload }: { payload: any }) => {
+        // 상대방이 카드를 선택했을 때 반영
+        if (payload.playerId !== studentName) {
+          setOpponentSelectedCardId(payload.cardId ?? null);
+        }
+      })
+      .on('broadcast', { event: 'battle_round_result' }, ({ payload }: { payload: any }) => {
+        // 상대방 퀴즈 결과 반영 (옵션)
+        console.log('[Battle] round result received:', payload);
+      })
+      .on('broadcast', { event: 'battle_end' }, ({ payload }: { payload: any }) => {
+        console.log('[Battle] battle end event received:', payload);
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+      battleChannelRef.current = null;
+    };
+  }, [classroomSession?.code, isAI, studentName]);
+
+  // ── Broadcast 헬퍼: 카드 선택 송신 ────────────────────
+  const broadcastCardSelected = (cardId: string) => {
+    const ch = battleChannelRef.current;
+    if (!ch || isAI) return;
+    ch.send({
+      type: 'broadcast',
+      event: 'battle_card_selected',
+      payload: { playerId: studentName, cardId, round, timestamp: Date.now() },
+    });
+  };
+
+  // ── Broadcast 헬퍼: 라운드 결과 송신 ──────────────────
+  const broadcastRoundResult = (
+    pCardId: string,
+    oCardId: string,
+    nextPlayerHp: number,
+    nextOpponentHp: number,
+    roundWinner: 'player' | 'opponent' | 'draw'
+  ) => {
+    const ch = battleChannelRef.current;
+    if (!ch || isAI) return;
+    ch.send({
+      type: 'broadcast',
+      event: 'battle_round_result',
+      payload: {
+        playerId: studentName,
+        round,
+        playerCard: pCardId,
+        opponentCard: oCardId,
+        playerHp: nextPlayerHp,
+        opponentHp: nextOpponentHp,
+        roundWinner,
+        timestamp: Date.now(),
+      },
+    });
+  };
+
+  // ── Broadcast 헬퍼: 배틀 종료 송신 ───────────────────
+  const broadcastBattleEnd = (outcome: 'victory' | 'defeat' | 'draw') => {
+    const ch = battleChannelRef.current;
+    if (!ch || isAI) return;
+    ch.send({
+      type: 'broadcast',
+      event: 'battle_end',
+      payload: { playerId: studentName, outcome, timestamp: Date.now() },
+    });
+  };
 
   // Matchmaking setup
   useEffect(() => {
@@ -401,6 +485,8 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     if (roundPhase !== 'card_select' || usedPlayerCardIds.includes(cardId)) return;
     setSelectedCardId(cardId);
     gameAudio.playClick();
+    // ── 카드 선택 Broadcast ──
+    broadcastCardSelected(cardId);
   };
 
   const handleQuizAnswerSubmit = (optionIndex: number) => {
@@ -501,6 +587,9 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
       const roundWinner = pDmg > oDmg ? 'player' : oDmg > pDmg ? 'opponent' : 'draw';
       setRoundsHistory(prev => [...prev, { winner: roundWinner, pCard, oCard }]);
 
+      // ── 라운드 결과 Broadcast ──
+      broadcastRoundResult(pCard.id, oCard.id, nextPlayerHp, nextOpponentHp, roundWinner);
+
       // Transition to next round or end
       setTimeout(() => {
         if (round >= 3 || nextPlayerHp <= 0 || nextOpponentHp <= 0) {
@@ -553,6 +642,9 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
     setBattleOutcome(outcome);
     setAwardedCoins(coins);
+
+    // ── 배틀 종료 Broadcast ──
+    broadcastBattleEnd(outcome);
 
     // Save coins to Player Inventory
     const local = getLocalPlayer();
