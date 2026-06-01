@@ -9,6 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Semantic CSS variable tokens — light/dark theme aware
+        panel:         'var(--bg-panel)',
+        'panel-sub':   'var(--bg-panel-sub)',
+        primary:       'var(--text-primary)',
+        secondary:     'var(--text-secondary)',
+        'accent-blue': 'var(--accent-blue)',
+        'accent-gold': 'var(--accent-gold)',
+        border:        'var(--border-color)',
+        // Legacy cyber palette
         cyberBg: "#05070c",
         cyberCard: "rgba(20, 30, 55, 0.45)",
         cyberBorder: "rgba(255, 255, 255, 0.08)",

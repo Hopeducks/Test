@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useGameState } from '../../lib/game-state';
+import { MCQuestion } from '../../types';
 import { cards } from '../../data/cards';
 import { questions } from '../../data/questions';
 import { ArrowLeft, BookOpen, Star, Printer, AlertCircle, CheckCircle } from 'lucide-react';
@@ -197,7 +198,7 @@ export default function MyPage({ onBack }: MyPageProps) {
                   <p className="text-xs font-bold text-white leading-relaxed">{q.question}</p>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-emerald-300">{q.options[q.correctIndex]}</p>
+                    <p className="text-xs text-emerald-300">{(q as MCQuestion).options[(q as MCQuestion).correctIndex]}</p>
                   </div>
                   {q.explanation && (
                     <p className="text-[10px] text-gray-500 leading-relaxed">{q.explanation}</p>

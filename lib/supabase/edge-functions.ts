@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import { Player, GameSession, BattleState, Question, Card, CostumeId } from '../../types';
+import { Player, GameSession, BattleState, Question, Card, CostumeId, isMCQuestion, isOXQuestion } from '../../types';
 
 const IS_SUPABASE_CONFIGURED = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -180,7 +180,9 @@ export async function submitQuizAnswer(
   const question = await getQuestionById(questionId);
   if (!question) throw new Error('Question not found');
 
-  const isCorrect = question.correctIndex === selectedIndex;
+  const isCorrect = (isMCQuestion(question) || isOXQuestion(question))
+    ? question.correctIndex === selectedIndex
+    : false;
 
   // Insert quiz_answers
   await supabase.from('quiz_answers').insert({

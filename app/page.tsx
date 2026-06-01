@@ -162,7 +162,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none opacity-20 z-40" />
 
       {/* Global Header */}
-      <header className="sticky top-0 z-30 w-full border-b border-cyan-500/10 bg-[#030712]/80 backdrop-blur-md">
+      <header className="sticky top-0 z-30 w-full border-b border-[var(--border-color)] bg-[var(--bg-panel-header)]/95 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div 
             onClick={() => {

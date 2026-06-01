@@ -283,6 +283,17 @@ interface NpcData {
   initialY: number;
 }
 
+const UNIT_THEMES: { color: number; name: string; emoji: string }[] = [
+  { color: 0xb5651d, name: '지층과 화석',      emoji: '🪨' },
+  { color: 0xfde047, name: '빛과 렌즈',        emoji: '🔭' },
+  { color: 0x06b6d4, name: '용액의 성질',      emoji: '🧪' },
+  { color: 0xef4444, name: '우리 몸',          emoji: '❤️' },
+  { color: 0x22c55e, name: '생태계와 환경',    emoji: '🌿' },
+  { color: 0x7dd3fc, name: '날씨와 우리 생활', emoji: '🌤️' },
+  { color: 0xf97316, name: '물체의 속력',      emoji: '💨' },
+  { color: 0xa855f7, name: '산과 염기',        emoji: '⚗️' },
+];
+
 const SCIENTIST_TRIVIA: string[] = [
   "지층은 오랜 시간 동안 흙이나 모래가 쌓여서 만들어진단다!",
   "빛은 물체를 만나면 반사하거나 굴절하는 성질이 있어.",
@@ -595,10 +606,12 @@ export default class LobbyScene extends Phaser.Scene {
       for (let i = 0; i < 8; i++) {
         const cx = (14.5 + i * 13.0) * TILE_SIZE;
         const cy = 12 * TILE_SIZE;
+        const theme = UNIT_THEMES[i];
+        const themeHex = '#' + theme.color.toString(16).padStart(6, '0');
 
         // Glowing Ring Particle
         const qRing = this.add.arc(cx, cy, 14, 0, 360, false);
-        qRing.setStrokeStyle(1.5, 0xf59e0b, 0.8);
+        qRing.setStrokeStyle(1.5, theme.color, 0.8);
         this.tweens.add({
           targets: qRing,
           radius: 26,
@@ -609,7 +622,7 @@ export default class LobbyScene extends Phaser.Scene {
 
         // Spinning concentric ring
         const qSpinner = this.add.arc(cx, cy, 18, 0, 360, false);
-        qSpinner.setStrokeStyle(2, 0xf59e0b, 0.6);
+        qSpinner.setStrokeStyle(2, theme.color, 0.6);
         this.tweens.add({
           targets: qSpinner,
           angle: 360,
@@ -618,13 +631,13 @@ export default class LobbyScene extends Phaser.Scene {
         });
 
         // Portal base
-        zoneGraphics.fillStyle(0xf59e0b, 0.1);
+        zoneGraphics.fillStyle(theme.color, 0.1);
         zoneGraphics.fillCircle(cx, cy, 16);
-        zoneGraphics.lineStyle(2, 0xf59e0b, 0.9);
+        zoneGraphics.lineStyle(2, theme.color, 0.9);
         zoneGraphics.strokeCircle(cx, cy, 16);
 
         // Core dot
-        const qCore = this.add.circle(cx, cy, 6, 0xf59e0b, 0.8);
+        const qCore = this.add.circle(cx, cy, 6, theme.color, 0.8);
         this.tweens.add({
           targets: qCore,
           scale: 1.25,
@@ -635,14 +648,23 @@ export default class LobbyScene extends Phaser.Scene {
           ease: 'Sine.easeInOut'
         });
 
-        // Portal label
+        // Unit number label
         this.add.text(cx, cy - 22, `${i + 1}단원`, {
           fontFamily: 'Galmuri11',
           fontSize: '9px',
-          color: '#f59e0b',
+          color: themeHex,
           fontStyle: 'bold',
           backgroundColor: '#0a0f1dbf',
           padding: { x: 3, y: 1 }
+        }).setOrigin(0.5);
+
+        // Unit theme name label
+        this.add.text(cx, cy - 34, `${theme.emoji} ${theme.name}`, {
+          fontFamily: 'Galmuri11',
+          fontSize: '8px',
+          color: themeHex,
+          backgroundColor: '#0a0f1dcc',
+          padding: { x: 4, y: 1 }
         }).setOrigin(0.5);
 
         this.portals.push({

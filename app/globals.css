@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 @font-face {
   font-family: 'Galmuri11';
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.1/Galmuri11.woff2') format('woff2'),
@@ -294,6 +296,7 @@
   --bg-dot-color: #dbeafe;
   --bg-panel: #ffffff;
   --bg-panel-sub: #f8fafc;
+  --bg-panel-header: #ffffff;
   --text-primary: #1e293b;
   --text-secondary: #475569;
   --border-color: #cbd5e1;
@@ -309,6 +312,7 @@
   --bg-dot-color: #1e293b;
   --bg-panel: #161f30;
   --bg-panel-sub: #0f172a;
+  --bg-panel-header: #0b0f19;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --border-color: #334155;

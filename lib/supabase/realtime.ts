@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './client';
-import { PlayerPosition, BossRaidState, BattleState, GameSession } from '../../types';
+import { PlayerPosition, BossRaidState, BattleState, GameSession, EmoteId } from '../../types';
+
+interface PresenceEntry {
+  presence_ref: string;
+  playerId?: string;
+  x?: number;
+  y?: number;
+  direction?: 'up' | 'down' | 'left' | 'right' | 'idle';
+  animFrame?: number;
+  emote?: string | null;
+}
 
 // ── Presence 동기화 훅 ────────────────────────────────
 export function usePresence(sessionCode: string): Record<string, PlayerPosition> {
@@ -18,7 +29,7 @@ export function usePresence(sessionCode: string): Record<string, PlayerPosition>
         const formatted: Record<string, PlayerPosition> = {};
         
         Object.keys(state).forEach((key) => {
-          const userPresences = state[key] as any[];
+          const userPresences = state[key] as PresenceEntry[];
           if (userPresences && userPresences.length > 0) {
             // 가장 최근의 presence 정보 사용
             const presenceInfo = userPresences[userPresences.length - 1];
@@ -29,7 +40,7 @@ export function usePresence(sessionCode: string): Record<string, PlayerPosition>
                 y: presenceInfo.y ?? 300,
                 direction: presenceInfo.direction ?? 'idle',
                 animFrame: presenceInfo.animFrame ?? 0,
-                emote: presenceInfo.emote ?? null,
+                emote: (presenceInfo.emote ?? null) as EmoteId | null,
               };
             }
           }
@@ -108,7 +119,7 @@ export function useSessionStatus(sessionCode: string): GameSession['status'] {
       .select('status')
       .eq('code', sessionCode)
       .single()
-      .then(({ data, error }: { data: { status: string } | null; error: any }) => {
+      .then(({ data, error }: { data: { status: string } | null; error: { message: string } | null }) => {
         if (data && !error) {
           setStatus(data.status as GameSession['status']);
         }
@@ -156,7 +167,7 @@ export function useSessionStatus(sessionCode: string): GameSession['status'] {
 }
 
 // ── 브로드캐스트 헬퍼 함수들 ─────────────────────────
-export function broadcastPosition(channel: any, position: PlayerPosition) {
+export function broadcastPosition(channel: RealtimeChannel, position: PlayerPosition) {
   if (!channel) return;
   channel.send({
     type: 'broadcast',
@@ -165,7 +176,7 @@ export function broadcastPosition(channel: any, position: PlayerPosition) {
   });
 }
 
-export function broadcastBattleEvent(channel: any, event: any) {
+export function broadcastBattleEvent(channel: RealtimeChannel, event: Record<string, unknown>) {
   if (!channel) return;
   channel.send({
     type: 'broadcast',

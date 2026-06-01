@@ -24,6 +24,8 @@ const LobbyChatPanel = dynamic(() => import('./ui/LobbyChatPanel'), { ssr: false
 const PokemonCenter = dynamic(() => import('./ui/PokemonCenter'), { ssr: false });
 const GymLeaderBattle = dynamic(() => import('./ui/GymLeaderBattle'), { ssr: false });
 const NpcQuestModal = dynamic(() => import('./ui/NpcQuestModal'), { ssr: false });
+const ZoneEntryPanel = dynamic(() => import('./ui/ZoneEntryPanel'), { ssr: false });
+const TournamentBracketView = dynamic(() => import('./ui/TournamentBracketView'), { ssr: false });
 
 // Map Dimensions
 const GRID_COLS = 120;
@@ -85,6 +87,12 @@ export default function StudentLobby({
   const [showGymModal, setShowGymModal] = useState(false);
   const [showNpcQuest, setShowNpcQuest] = useState(false);
   const [activeNpcName, setActiveNpcName] = useState('');
+  const [zoneEntry, setZoneEntry] = useState<{ unitId: number } | null>(null);
+
+  const NPC_NAMES_BY_UNIT: Record<number, string> = {
+    1: '갈릴레이', 2: '뉴턴', 3: '파스퇴르', 4: '나이팅게일',
+    5: '다윈', 6: '베게너', 7: '아인슈타인', 8: '퀴리 부인',
+  };
 
   // Connection Session States
   const [sessionCode, setSessionCode] = useState<string>('');
@@ -476,7 +484,8 @@ export default function StudentLobby({
         alert(`🔒 이 단원은 잠겨 있습니다! 이전 단원의 체육관 관장을 격퇴하고 [지층 배지] 등 직전 배지를 획득해야 입장할 수 있습니다.`);
         return;
       }
-      onStartQuiz(targetUnitId);
+      gameAudio.playClick();
+      setZoneEntry({ unitId: targetUnitId });
     } else if (zone === 'battle') {
       onStartBattle();
     } else if (zone === 'raid') {
@@ -1223,6 +1232,36 @@ export default function StudentLobby({
             setShowGymModal(false);
             setShowCenterModal(true);
           }}
+        />
+      )}
+
+      {/* Tournament Bracket Overlay */}
+      {classroomSession?.status === 'tournament' && classroomSession.tournament && (
+        <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl">
+            <TournamentBracketView
+              bracket={classroomSession.tournament}
+              myName={studentName}
+            />
+            <p className="text-center text-xs font-mono text-gray-500 mt-3">
+              교사가 대결 결과를 선택하면 다음 라운드로 진행됩니다.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Zone Entry Panel — shown when player enters a quiz portal */}
+      {zoneEntry && (
+        <ZoneEntryPanel
+          unitId={zoneEntry.unitId}
+          onStartQuiz={() => { setZoneEntry(null); onStartQuiz(zoneEntry.unitId); }}
+          onOpenNpc={() => {
+            const npcName = NPC_NAMES_BY_UNIT[zoneEntry.unitId] ?? '갈릴레이';
+            setZoneEntry(null);
+            setActiveNpcName(npcName);
+            setShowNpcQuest(true);
+          }}
+          onClose={() => setZoneEntry(null)}
         />
       )}
 
