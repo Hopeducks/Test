@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, Question, CostumeId } from '../../types';
+import { Player, Question, CostumeId, MCQuestion, OXQuestion, isMCQuestion, isOXQuestion, isMatchingQuestion, isShortQuestion } from '../../types';
+import { OXRenderer, MatchingRenderer, ShortAnswerRenderer } from './quiz';
 import { useGameState } from '../../lib/game-state';
 import { supabase } from '../../lib/supabase-client';
 import { submitQuizAnswer } from '../../lib/supabase/edge-functions';
@@ -233,7 +234,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     const sessionCode = classroomSession?.code;
     if (!sessionCode) return;
     const ch = supabase.channel(`settings_listen_${sessionCode}`);
-    ch.on('broadcast', { event: 'settings_update' }, ({ payload }: { payload: any }) => {
+    ch.on('broadcast', { event: 'settings_update' }, ({ payload }: { payload: { timerSeconds?: number } }) => {
       if (typeof payload?.timerSeconds === 'number') {
         setTotalTime(payload.timerSeconds);
         setClassroomSession({
@@ -457,6 +458,30 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
       setLoading(false);
       setIsAnswered(true);
     }
+  };
+
+  // Handler for OX/Matching/Short question types (client-side scoring)
+  const handleNewTypeAnswer = (isCorrect: boolean) => {
+    if (isAnswered || !player) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    const q = questionsList[currentIndex];
+    setIsAnswered(true);
+    broadcastQuizAnswer(q.id, isCorrect, isCorrect && q.cardReward ? q.cardReward : undefined);
+    if (isCorrect) {
+      setScore(prev => prev + 1); setStreak(prev => prev + 1);
+      setFlashType('correct'); gameAudio.playCorrect();
+      if (q.cardReward) { unlockCard(q.cardReward); setNewlyUnlockedCardIds(prev => [...prev, q.cardReward!]); }
+    } else {
+      setStreak(0); setFlashType('wrong'); gameAudio.playWrong(); addWrongAnswer(q.id);
+    }
+    setExplanationVisible(true);
+    setTimeout(() => { setFlashType(null); setTimeout(() => { setExplanationVisible(false); handleNext(); }, 2200); }, 800);
+  };
+
+  const handleOXAnswer = (selectedIndex: 0 | 1) => {
+    const q = questionsList[currentIndex];
+    if (!isOXQuestion(q)) return;
+    handleNewTypeAnswer(selectedIndex === (q as OXQuestion).correctIndex);
   };
 
   const handleNext = () => {
@@ -902,46 +927,65 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
             </div>
           </div>
 
-          {/* Large A/B/C/D Choices Buttons */}
-          <div className="grid grid-cols-1 gap-4">
-            {currentQuestion.options.map((option, idx) => {
-              let btnStyle = theme.btnStyle;
-              
-              if (isAnswered) {
-                if (idx === currentQuestion.correctIndex) {
-                  btnStyle = 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-extrabold shadow-[0_0_15px_rgba(16,185,129,0.25)]';
-                } else if (idx === selectedOption) {
-                  btnStyle = 'border-red-500 bg-red-950/40 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.25)]';
-                } else {
-                  btnStyle = 'border-gray-950 bg-gray-950/20 text-gray-600 cursor-not-allowed opacity-40';
+          {/* Question Type Dispatcher */}
+          {isOXQuestion(currentQuestion) ? (
+            <OXRenderer
+              question={currentQuestion}
+              isAnswered={isAnswered}
+              btnCorrectStyle="border-emerald-500 bg-emerald-950/40 text-emerald-300 font-extrabold shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+              btnIncorrectStyle="border-red-500 bg-red-950/40 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.25)]"
+              onAnswer={handleOXAnswer}
+            />
+          ) : isMatchingQuestion(currentQuestion) ? (
+            <MatchingRenderer
+              question={currentQuestion}
+              isAnswered={isAnswered}
+              onAnswer={handleNewTypeAnswer}
+            />
+          ) : isShortQuestion(currentQuestion) ? (
+            <ShortAnswerRenderer
+              question={currentQuestion}
+              isAnswered={isAnswered}
+              onAnswer={handleNewTypeAnswer}
+            />
+          ) : (
+            /* MC: A/B/C/D grid */
+            <div className="grid grid-cols-1 gap-4">
+              {(currentQuestion as MCQuestion).options.map((option, idx) => {
+                let btnStyle = theme.btnStyle;
+                if (isAnswered) {
+                  if (idx === (currentQuestion as MCQuestion).correctIndex) {
+                    btnStyle = 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-extrabold shadow-[0_0_15px_rgba(16,185,129,0.25)]';
+                  } else if (idx === selectedOption) {
+                    btnStyle = 'border-red-500 bg-red-950/40 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.25)]';
+                  } else {
+                    btnStyle = 'border-gray-950 bg-gray-950/20 text-gray-600 cursor-not-allowed opacity-40';
+                  }
                 }
-              }
-
-              return (
-                <button
-                  key={idx}
-                  disabled={isAnswered || loading}
-                  onClick={() => handleOptionClick(idx)}
-                  className={`min-h-[64px] px-6 py-4 text-left rounded-2xl border btn-cyber transition-all duration-200 flex items-center justify-start gap-4 touch-target ${btnStyle}`}
-                >
-                  <span className={`w-8 h-8 rounded-full border flex items-center justify-center font-mono font-black text-sm shrink-0 ${
-                    isAnswered
-                      ? idx === currentQuestion.correctIndex
-                        ? 'border-emerald-500 bg-emerald-500 text-black'
-                        : idx === selectedOption
-                          ? 'border-red-500 bg-red-500 text-black'
-                          : 'border-gray-900 text-gray-700 bg-transparent'
-                      : 'border-cyan-500/20 text-cyan-400 bg-transparent'
-                  }`}>
-                    {optionLetters[idx]}
-                  </span>
-                  <span className="text-[17px] md:text-[19px] font-bold">
-                    {option}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={idx}
+                    disabled={isAnswered || loading}
+                    onClick={() => handleOptionClick(idx)}
+                    className={`min-h-[64px] px-6 py-4 text-left rounded-2xl border btn-cyber transition-all duration-200 flex items-center justify-start gap-4 touch-target ${btnStyle}`}
+                  >
+                    <span className={`w-8 h-8 rounded-full border flex items-center justify-center font-mono font-black text-sm shrink-0 ${
+                      isAnswered
+                        ? idx === (currentQuestion as MCQuestion).correctIndex
+                          ? 'border-emerald-500 bg-emerald-500 text-black'
+                          : idx === selectedOption
+                            ? 'border-red-500 bg-red-500 text-black'
+                            : 'border-gray-900 text-gray-700 bg-transparent'
+                        : 'border-cyan-500/20 text-cyan-400 bg-transparent'
+                    }`}>
+                      {optionLetters[idx]}
+                    </span>
+                    <span className="text-[17px] md:text-[19px] font-bold">{option}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Explanation Overlay Screen */}
           {explanationVisible && (
@@ -949,7 +993,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
               <div className="flex flex-col md:flex-row gap-5 items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    {selectedOption === currentQuestion.correctIndex ? (
+                    {(isMCQuestion(currentQuestion) ? selectedOption === (currentQuestion as MCQuestion).correctIndex : flashType === 'correct') ? (
                       <span className="text-emerald-400 font-extrabold text-sm flex items-center gap-1.5">
                         <CheckCircle className="w-4 h-4" /> 정답입니다! (Correct)
                       </span>
@@ -959,10 +1003,22 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
                       </span>
                     )}
                   </div>
-                  
-                  <div className="text-base text-cyan-400 font-bold mb-2">
-                    정답: {optionLetters[currentQuestion.correctIndex]}. {currentQuestion.options[currentQuestion.correctIndex]}
-                  </div>
+
+                  {isMCQuestion(currentQuestion) && (
+                    <div className="text-base text-cyan-400 font-bold mb-2">
+                      정답: {optionLetters[(currentQuestion as MCQuestion).correctIndex]}. {(currentQuestion as MCQuestion).options[(currentQuestion as MCQuestion).correctIndex]}
+                    </div>
+                  )}
+                  {isOXQuestion(currentQuestion) && (
+                    <div className="text-base text-cyan-400 font-bold mb-2">
+                      정답: {currentQuestion.correctIndex === 0 ? '⭕ 맞다 (O)' : '❌ 틀리다 (X)'}
+                    </div>
+                  )}
+                  {isShortQuestion(currentQuestion) && (
+                    <div className="text-base text-cyan-400 font-bold mb-2">
+                      정답: {currentQuestion.correctAnswer}
+                    </div>
+                  )}
 
                   <p className="text-gray-300 text-[15px] md:text-[16px] leading-relaxed font-medium">
                     {currentQuestion.explanation}

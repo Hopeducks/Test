@@ -1,4 +1,7 @@
 import { Question } from '../types';
+import { oxQuestions } from './questions-ox';
+import { matchingQuestions } from './questions-matching';
+import { shortQuestions } from './questions-short';
 
 export const questions: Question[] = [
   // ==================== UNIT 1: 지층과 화석 (1~40) ====================
@@ -2651,7 +2654,11 @@ export const questions: Question[] = [
 ];
 
 export function getUnitQuestions(unitId: number): Question[] {
-  return questions.filter((q) => q.unitId === unitId);
+  const mc = questions.filter(q => q.unitId === unitId);
+  const ox = oxQuestions.filter(q => q.unitId === unitId);
+  const matching = matchingQuestions.filter(q => q.unitId === unitId);
+  const short = shortQuestions.filter(q => q.unitId === unitId);
+  return [...mc, ...ox, ...matching, ...short];
 }
 
 export function getUnitTitle(unitId: number): string {

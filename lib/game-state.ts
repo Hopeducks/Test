@@ -167,7 +167,7 @@ class GameStateManager {
   };
   private listeners: Set<() => void> = new Set();
   private isInitialized = false;
-  private localQuizSession: any = null;
+  private localQuizSession: ClassroomSession | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -192,7 +192,7 @@ class GameStateManager {
       // Listen to Supabase Realtime broadcast channel to sync session state in real time
       import('./supabase-client').then(({ supabase }) => {
         supabase.channel('classroom_session_global')
-          .on('broadcast', { event: 'session_update' }, ({ payload }: any) => {
+          .on('broadcast', { event: 'session_update' }, ({ payload }: { payload: ClassroomSession }) => {
             if (payload) {
               this.state.classroomSession = payload;
               this.save();
@@ -279,7 +279,7 @@ class GameStateManager {
             };
             
             if (Array.isArray(parsedLegacy.caughtPokemon)) {
-              parsedLegacy.caughtPokemon.forEach((legacyId: any) => {
+              parsedLegacy.caughtPokemon.forEach((legacyId: string | number) => {
                 const name = LEGACY_ID_TO_NAME[Number(legacyId)];
                 if (name) {
                   const card = cards.find(c => c.name === name);
@@ -331,7 +331,7 @@ class GameStateManager {
         this.state.soundOn = savedSound === 'true';
       }
       if (savedRole !== null) {
-        this.state.role = savedRole as any;
+        this.state.role = savedRole as GameState['role'];
       } else {
         this.state.role = 'none';
       }
@@ -958,11 +958,11 @@ class GameStateManager {
     this.save();
   }
 
-  getCurrentQuizSession(): any {
+  getCurrentQuizSession(): ClassroomSession | null {
     return this.localQuizSession;
   }
 
-  setCurrentQuizSession(session: any) {
+  setCurrentQuizSession(session: ClassroomSession | null) {
     this.localQuizSession = session;
   }
 
@@ -1308,7 +1308,7 @@ export function useGameState() {
     getLocalPlayer: () => gameStateManager.getLocalPlayer(),
     setLocalPlayer: (player: Player) => gameStateManager.setLocalPlayer(player),
     getCurrentQuizSession: () => gameStateManager.getCurrentQuizSession(),
-    setCurrentQuizSession: (session: any) => gameStateManager.setCurrentQuizSession(session),
+    setCurrentQuizSession: (session: ClassroomSession | null) => gameStateManager.setCurrentQuizSession(session),
     getCostumeInventory: (player: Player) => gameStateManager.getCostumeInventory(player),
     checkAchievements: (player: Player, event: { type: string; val: number }) => gameStateManager.checkAchievements(player, event),
     getCardPower: (cardId: string) => gameStateManager.getCardPower(cardId),

@@ -88,16 +88,46 @@ export interface PlayerPosition {
 }
 
 // ── 퀴즈 ─────────────────────────────────────────────
-export interface Question {
-  id: string
-  unitId: number
-  question: string
-  options: [string, string, string, string]
-  correctIndex: 0 | 1 | 2 | 3
-  explanation: string
-  difficulty?: 'easy' | 'medium' | 'hard'
-  cardReward?: string
+interface BaseQuestion {
+  id: string;
+  unitId: number;
+  question: string;
+  explanation: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  cardReward?: string;
 }
+
+export interface MCQuestion extends BaseQuestion {
+  type?: 'mc';   // optional for backward compat with existing 320 questions
+  options: [string, string, string, string];
+  correctIndex: 0 | 1 | 2 | 3;
+}
+
+export interface OXQuestion extends BaseQuestion {
+  type: 'ox';
+  correctIndex: 0 | 1;  // 0=O(맞다), 1=X(틀리다)
+}
+
+export interface MatchingQuestion extends BaseQuestion {
+  type: 'matching';
+  pairs: { left: string; right: string }[];
+}
+
+export interface ShortQuestion extends BaseQuestion {
+  type: 'short';
+  correctAnswer: string;       // 대표 정답 (설명 표시용)
+  acceptedAnswers: string[];   // 채점 키워드 배열
+}
+
+export type Question = MCQuestion | OXQuestion | MatchingQuestion | ShortQuestion;
+
+// ── 퀴즈 타입 가드 ───────────────────────────────────
+export function isMCQuestion(q: Question): q is MCQuestion {
+  return (q as MCQuestion).options !== undefined;
+}
+export function isOXQuestion(q: Question): q is OXQuestion { return q.type === 'ox'; }
+export function isMatchingQuestion(q: Question): q is MatchingQuestion { return q.type === 'matching'; }
+export function isShortQuestion(q: Question): q is ShortQuestion { return q.type === 'short'; }
 
 // ── 카드 ─────────────────────────────────────────────
 export type CardRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
@@ -278,15 +308,36 @@ export interface SimulatedStudent {
   weaknessUnitId?: number
 }
 
+// ── 토너먼트 ─────────────────────────────────────────
+export interface TournamentMatch {
+  p1: string;          // 학생 이름
+  p2: string;          // 학생 이름 또는 'BYE'
+  winner: string | null;
+  status: 'pending' | 'fighting' | 'done';
+}
+
+export interface TournamentRound {
+  matches: TournamentMatch[];
+}
+
+export interface TournamentBracket {
+  rounds: TournamentRound[];
+  currentRoundIdx: number;
+  champion: string | null;
+}
+
 export interface ClassroomSession {
   code?: string
   settings?: SessionSettings
   activeUnitId: number
-  status: 'lobby' | 'playing' | 'ended'
+  status: 'lobby' | 'playing' | 'ended' | 'tournament'
   currentQuestionIndex: number
   questionStartTime: number
   questionIds?: string[]
   battleMode: boolean
+  tournament?: TournamentBracket;
+  raidBossMaxHp?: number;
+  timeAttackMode?: boolean;
   activeBattles?: {
     battleId: string;
     player1: string;
@@ -346,5 +397,15 @@ export interface RealtimePlayerState {
   }
   lastUpdated: number
   cp?: number
+}
+
+// ── Supabase Realtime 페이로드 타입 ──────────────────
+export interface BroadcastPayload<T = Record<string, unknown>> {
+  event: string;
+  payload: T;
+  type: 'broadcast';
+}
+export interface PresenceSyncPayload {
+  [key: string]: RealtimePlayerState;
 }
 

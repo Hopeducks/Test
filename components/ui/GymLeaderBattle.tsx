@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGameState } from '../../lib/game-state';
+import { MCQuestion } from '../../types';
 import { getUnitQuestions } from '../../data/questions';
 import { cards } from '../../data/cards';
 import { gameAudio } from '../../lib/audio';
@@ -66,7 +67,7 @@ export default function GymLeaderBattle({ unitId, onClose, onDefeated, onGoToCen
     if (chosenOpt === null || !activeQuestion) return;
     setIsAnswered(true);
 
-    const isCorrect = chosenOpt === activeQuestion.correctIndex;
+    const isCorrect = chosenOpt === (activeQuestion as MCQuestion).correctIndex;
     if (isCorrect) {
       gameAudio.playCorrect();
       setLeaderHp(prev => Math.max(0, prev - 1));
@@ -228,11 +229,11 @@ export default function GymLeaderBattle({ unitId, onClose, onDefeated, onGoToCen
 
             {/* Options grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeQuestion.options.map((opt, idx) => {
+              {(activeQuestion as MCQuestion).options.map((opt, idx) => {
                 let btnStyle = 'border-red-500/10 hover:border-red-500/40 hover:bg-red-950/10 text-gray-200';
                 
                 if (isAnswered) {
-                  if (idx === activeQuestion.correctIndex) {
+                  if (idx === (activeQuestion as MCQuestion).correctIndex) {
                     btnStyle = 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-extrabold';
                   } else if (idx === chosenOpt) {
                     btnStyle = 'border-red-500 bg-red-950/40 text-red-300';
@@ -265,8 +266,8 @@ export default function GymLeaderBattle({ unitId, onClose, onDefeated, onGoToCen
             {isAnswered && (
               <div className="glass-panel p-5 border-red-500/20 bg-[#120708] relative overflow-hidden animate-slide-up flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex-1">
-                  <h4 className={`text-base font-black ${chosenOpt === activeQuestion.correctIndex ? 'text-green-400' : 'text-red-500'}`}>
-                    {chosenOpt === activeQuestion.correctIndex 
+                  <h4 className={`text-base font-black ${chosenOpt === (activeQuestion as MCQuestion).correctIndex ? 'text-green-400' : 'text-red-500'}`}>
+                    {chosenOpt === (activeQuestion as MCQuestion).correctIndex 
                       ? '💥 정확한 대답이다! 관장의 보스 포켓몬에게 큰 데미지를 주었습니다.' 
                       : '❌ 틀린 대답이다! 관장의 반격에 피해를 입었습니다.'}
                   </h4>

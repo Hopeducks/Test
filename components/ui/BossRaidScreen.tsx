@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Player, Question, Card, GameSession } from '../../types';
+import { Player, Question, Card, GameSession, MCQuestion } from '../../types';
 import { useGameState, getCardAttribute, getAttackMultiplier, ATTRIBUTE_EMOJIS } from '../../lib/game-state';
 import { supabase } from '../../lib/supabase-client';
 import { submitQuizAnswer } from '../../lib/supabase/edge-functions';
@@ -117,7 +117,7 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
         schema: 'public',
         table: 'game_sessions',
         filter: `code=eq.${sessionCode}`
-      }, (payload: any) => {
+      }, (payload: { new: { boss_hp?: number | null } }) => {
         const nextHp = payload.new.boss_hp ?? 0;
         setBossHp(nextHp);
         
@@ -130,7 +130,7 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
     const broadcastChannel = supabase.channel(`session_boss_raid_${sessionCode}`);
     
     broadcastChannel
-      .on('broadcast', { event: 'boss_damage' }, ({ payload }: { payload: any }) => {
+      .on('broadcast', { event: 'boss_damage' }, ({ payload }: { payload: { playerId: string; nickname: string; damage: number; isMiss: boolean } }) => {
         const { playerId, nickname, damage, isMiss } = payload;
         
         // Add Contribution
@@ -559,11 +559,11 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
 
             {/* 4 Choices Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {currentQuestion.options.map((option, idx) => {
+              {(currentQuestion as MCQuestion).options.map((option, idx) => {
                 let btnStyle = 'border-red-500/10 hover:border-red-500/40 bg-gray-950/40 hover:bg-red-950/10 text-gray-200';
                 
                 if (isAnswered) {
-                  if (idx === currentQuestion.correctIndex) {
+                  if (idx === (currentQuestion as MCQuestion).correctIndex) {
                     btnStyle = 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-extrabold shadow-[0_0_10px_rgba(16,185,129,0.2)]';
                   } else if (idx === selectedOption) {
                     btnStyle = 'border-red-500 bg-red-950/40 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.2)]';
@@ -581,7 +581,7 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
                   >
                     <span className={`w-8 h-8 rounded-full border flex items-center justify-center font-mono font-black text-sm shrink-0 ${
                       isAnswered
-                        ? idx === currentQuestion.correctIndex
+                        ? idx === (currentQuestion as MCQuestion).correctIndex
                           ? 'border-emerald-500 bg-emerald-500 text-black'
                           : idx === selectedOption
                             ? 'border-red-500 bg-red-500 text-black'

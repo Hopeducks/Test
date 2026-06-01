@@ -28,7 +28,7 @@ import {
   Flame,
   Crown
 } from 'lucide-react';
-import { Question, CollectibleCard, Card, Player } from '../../types';
+import { Question, CollectibleCard, Card, Player, MCQuestion } from '../../types';
 
 interface CardBattleArenaProps {
   onBack: () => void;
@@ -227,17 +227,17 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     battleChannelRef.current = channel;
 
     channel
-      .on('broadcast', { event: 'battle_card_selected' }, ({ payload }: { payload: any }) => {
+      .on('broadcast', { event: 'battle_card_selected' }, ({ payload }: { payload: { playerId: string; cardId?: string | null } }) => {
         // 상대방이 카드를 선택했을 때 반영
         if (payload.playerId !== studentName) {
           setOpponentSelectedCardId(payload.cardId ?? null);
         }
       })
-      .on('broadcast', { event: 'battle_round_result' }, ({ payload }: { payload: any }) => {
+      .on('broadcast', { event: 'battle_round_result' }, ({ payload }: { payload: Record<string, unknown> }) => {
         // 상대방 퀴즈 결과 반영 (옵션)
         console.log('[Battle] round result received:', payload);
       })
-      .on('broadcast', { event: 'battle_end' }, ({ payload }: { payload: any }) => {
+      .on('broadcast', { event: 'battle_end' }, ({ payload }: { payload: Record<string, unknown> }) => {
         console.log('[Battle] battle end event received:', payload);
       })
       .subscribe();
@@ -495,7 +495,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     setSelectedOption(optionIndex);
     setIsQuizAnswered(true);
 
-    const correct = optionIndex === quizQuestion.correctIndex;
+    const correct = optionIndex === (quizQuestion as MCQuestion).correctIndex;
     setPlayerCorrect(correct);
 
     if (correct) {
@@ -1107,9 +1107,9 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {quizQuestion.options.map((option, idx) => {
+                    {(quizQuestion as MCQuestion).options.map((option, idx) => {
                       const isSelected = selectedOption === idx;
-                      const isCorrect = idx === quizQuestion.correctIndex;
+                      const isCorrect = idx === (quizQuestion as MCQuestion).correctIndex;
                       
                       let btnStyle = 'border-gray-800 bg-gray-950 hover:border-cyan-500/50 text-gray-300';
                       if (isQuizAnswered) {

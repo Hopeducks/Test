@@ -1,0 +1,12 @@
+import { MatchingQuestion } from '../types';
+
+export const matchingQuestions: MatchingQuestion[] = [
+  { id: 'u1_m1', unitId: 1, type: 'matching', question: '퇴적암과 그 특징을 올바르게 연결하세요.', pairs: [{ left: '이암', right: '고운 진흙이 굳어진 암석' }, { left: '사암', right: '모래가 굳어진 까칠까칠한 암석' }, { left: '역암', right: '자갈이 포함된 퇴적암' }], explanation: '퇴적암은 구성 알갱이 크기에 따라 이암(진흙), 사암(모래), 역암(자갈)으로 나눕니다.', difficulty: 'medium' },
+  { id: 'u2_m1', unitId: 2, type: 'matching', question: '빛의 성질과 관련된 개념을 올바르게 연결하세요.', pairs: [{ left: '반사', right: '빛이 물체 표면에서 되돌아오는 현상' }, { left: '굴절', right: '빛이 다른 물질로 넘어가며 방향이 바뀌는 현상' }, { left: '흡수', right: '빛이 물체에 들어가 에너지로 변하는 현상' }], explanation: '반사·굴절·흡수는 빛이 물체와 만날 때 일어나는 세 가지 기본 현상입니다.', difficulty: 'medium' },
+  { id: 'u3_m1', unitId: 3, type: 'matching', question: '용액 관련 용어를 올바르게 연결하세요.', pairs: [{ left: '용매', right: '다른 물질을 녹이는 액체' }, { left: '용질', right: '용매에 녹는 물질' }, { left: '용액', right: '용매와 용질이 고르게 섞인 혼합물' }], explanation: '소금물에서 물=용매, 소금=용질, 소금물=용액입니다.', difficulty: 'easy' },
+  { id: 'u4_m1', unitId: 4, type: 'matching', question: '우리 몸의 기관과 기능을 올바르게 연결하세요.', pairs: [{ left: '심장', right: '혈액을 온몸으로 순환시킨다' }, { left: '폐', right: '산소와 이산화탄소를 교환한다' }, { left: '위', right: '소화액으로 음식물을 분해한다' }], explanation: '각 기관은 고유한 기능을 담당하며 서로 협력하여 생명을 유지합니다.', difficulty: 'medium' },
+  { id: 'u5_m1', unitId: 5, type: 'matching', question: '먹이 사슬의 구성원과 역할을 연결하세요.', pairs: [{ left: '생산자', right: '광합성으로 스스로 양분을 만든다' }, { left: '소비자', right: '다른 생물을 먹어 양분을 얻는다' }, { left: '분해자', right: '죽은 생물을 무기물로 분해한다' }], explanation: '생태계는 생산자·소비자·분해자가 유기적으로 연결되어 물질을 순환시킵니다.', difficulty: 'easy' },
+  { id: 'u6_m1', unitId: 6, type: 'matching', question: '날씨 현상과 원인을 올바르게 연결하세요.', pairs: [{ left: '비', right: '구름 속 물방울이 무거워져 떨어짐' }, { left: '눈', right: '기온이 낮을 때 얼음 알갱이가 떨어짐' }, { left: '이슬', right: '밤에 기온이 내려가 수증기가 응결됨' }], explanation: '날씨 현상은 대기 중 수증기의 상태 변화에 의해 일어납니다.', difficulty: 'medium' },
+  { id: 'u7_m1', unitId: 7, type: 'matching', question: '운동 관련 용어와 정의를 연결하세요.', pairs: [{ left: '속력', right: '단위 시간당 이동 거리' }, { left: '속도', right: '크기와 방향이 있는 속력' }, { left: '가속도', right: '단위 시간당 속도의 변화량' }], explanation: '물체의 운동은 속력, 속도, 가속도로 정량적으로 나타낼 수 있습니다.', difficulty: 'hard' },
+  { id: 'u8_m1', unitId: 8, type: 'matching', question: '산과 염기의 특성을 연결하세요.', pairs: [{ left: '산', right: '파란 리트머스를 빨갛게 변화' }, { left: '염기', right: '빨간 리트머스를 파랗게 변화' }, { left: '중화', right: '산과 염기가 반응하여 서로 상쇄' }], explanation: '산과 염기는 리트머스 종이로 구별하며, 만나면 중화 반응을 일으킵니다.', difficulty: 'medium' },
+];

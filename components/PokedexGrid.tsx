@@ -6,6 +6,7 @@ import { cards } from '../data/cards';
 import { UNITS } from './PokedexHome';
 import { gameAudio } from '../lib/audio';
 import { Search, X, BookOpen, Lock, Sparkles, SlidersHorizontal } from 'lucide-react';
+import CardArt from './ui/CardArt';
 import { CollectibleCard } from '../types';
 
 interface PokedexGridProps {
@@ -203,16 +204,15 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
                 {/* Display Body */}
                 <div className="flex-1 flex flex-col items-center justify-center py-2">
                   {isUnlocked ? (
-                    <>
-                      <span className="text-4xl md:text-5xl drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:scale-110 transition-transform">
-                        {evolution.emoji}
-                      </span>
-                      <h3 className={`text-xs font-bold text-center mt-3 tracking-wide truncate w-full ${
-                        isLegendary ? 'text-amber-400 font-extrabold' : isRare ? 'text-blue-400' : 'text-cyan-400'
-                      }`}>
-                        {evolution.name}
-                      </h3>
-                    </>
+                    <div className="group-hover:scale-105 transition-transform">
+                      <CardArt
+                        unitId={card.unitId}
+                        rarity={card.rarity as import('../types').CardRarity}
+                        emoji={evolution.emoji}
+                        name={evolution.name}
+                        size="sm"
+                      />
+                    </div>
                   ) : (
                     <>
                       <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-800 flex items-center justify-center mb-1 bg-gray-900/40">

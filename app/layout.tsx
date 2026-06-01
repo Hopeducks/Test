@@ -1,20 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  variable: '--font-outfit',
-  weight: ['300', '400', '500', '600', '700', '800'],
-  display: 'swap',
-});
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ['latin'],
-  variable: '--font-noto-sans-kr',
-  weight: ['300', '400', '500', '700', '900'],
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: '과학 마스터 도감 (Science Master Pokédex) - 초등 5학년 과학 복습',
@@ -44,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className={`${outfit.variable} ${notoSansKr.variable}`} suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning>
       <head>
         <meta name="darkreader-lock" />
       </head>

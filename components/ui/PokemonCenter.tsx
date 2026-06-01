@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useGameState } from '../../lib/game-state';
+import { MCQuestion } from '../../types';
 import { questions } from '../../data/questions';
 import { cards } from '../../data/cards';
 import { gameAudio } from '../../lib/audio';
@@ -50,7 +51,7 @@ export default function PokemonCenter({ onClose }: PokemonCenterProps) {
     if (chosenOption === null || !selectedQuestion) return;
     setIsSubmitted(true);
 
-    const isCorrect = chosenOption === selectedQuestion.correctIndex;
+    const isCorrect = chosenOption === (selectedQuestion as MCQuestion).correctIndex;
     if (isCorrect) {
       gameAudio.playCorrect();
       
@@ -193,10 +194,10 @@ export default function PokemonCenter({ onClose }: PokemonCenterProps) {
                 </p>
 
                 <div className="space-y-3 mb-6">
-                  {selectedQuestion.options.map((opt, idx) => {
+                  {(selectedQuestion as MCQuestion).options.map((opt, idx) => {
                     let btnStyle = 'border-pink-500/10 hover:border-pink-400/40 bg-gray-950/30 text-gray-200';
                     if (isSubmitted) {
-                      if (idx === selectedQuestion.correctIndex) {
+                      if (idx === (selectedQuestion as MCQuestion).correctIndex) {
                         btnStyle = 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-extrabold';
                       } else if (idx === chosenOption) {
                         btnStyle = 'border-red-500 bg-red-950/40 text-red-300';
@@ -225,7 +226,7 @@ export default function PokemonCenter({ onClose }: PokemonCenterProps) {
                   })}
                 </div>
 
-                {isSubmitted && chosenOption !== selectedQuestion.correctIndex && (
+                {isSubmitted && chosenOption !== (selectedQuestion as MCQuestion).correctIndex && (
                   <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-left text-xs mb-6 font-sans">
                     <span className="text-red-400 font-bold block mb-1 flex items-center gap-1">
                       <AlertTriangle className="w-3.5 h-3.5" />
@@ -240,7 +241,7 @@ export default function PokemonCenter({ onClose }: PokemonCenterProps) {
                     onClick={() => setSelectedQuestion(null)}
                     className="flex-1 py-3.5 bg-gray-950 hover:bg-gray-900 text-gray-400 hover:text-white border border-gray-850 rounded-xl transition-all"
                   >
-                    {isSubmitted && chosenOption !== selectedQuestion.correctIndex ? '다시 고민해보기' : '닫기'}
+                    {isSubmitted && chosenOption !== (selectedQuestion as MCQuestion).correctIndex ? '다시 고민해보기' : '닫기'}
                   </button>
 
                   {!isSubmitted && (
