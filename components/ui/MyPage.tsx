@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { useGameState } from '../../lib/game-state';
-import { MCQuestion } from '../../types';
+import { Question, isMCQuestion, isOXQuestion, isShortQuestion, isMatchingQuestion } from '../../types';
 import { cards } from '../../data/cards';
 import { questions } from '../../data/questions';
-import { ArrowLeft, BookOpen, Star, Printer, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, Star, Printer, AlertCircle, CheckCircle, Trophy, Target } from 'lucide-react';
 
 const UNITS = [
   { id: 1, title: '지층과 화석', icon: '🪨' },
@@ -17,6 +17,14 @@ const UNITS = [
   { id: 7, title: '물체의 운동', icon: '🏃' },
   { id: 8, title: '산과 염기', icon: '💧' },
 ];
+
+function getCorrectAnswerText(q: Question): string {
+  if (isMCQuestion(q)) return q.options[q.correctIndex];
+  if (isOXQuestion(q)) return q.correctIndex === 0 ? 'O (맞다)' : 'X (틀리다)';
+  if (isShortQuestion(q)) return q.correctAnswer;
+  if (isMatchingQuestion(q)) return q.pairs.map(p => `${p.left} → ${p.right}`).join(' / ');
+  return '';
+}
 
 interface MyPageProps {
   onBack: () => void;
@@ -40,11 +48,16 @@ export default function MyPage({ onBack }: MyPageProps) {
   const wrongQuestions = (wrongAnswers ?? [])
     .slice(0, 10)
     .map(id => questions.find(q => q.id === id))
-    .filter(Boolean);
+    .filter(Boolean) as Question[];
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const scoredUnits = UNITS.filter(u => unitHighScores[u.id] !== undefined);
+  const bestUnit = scoredUnits.reduce<typeof UNITS[0] | null>((best, u) => {
+    if (!best) return u;
+    return (unitHighScores[u.id] ?? 0) > (unitHighScores[best.id] ?? 0) ? u : best;
+  }, null);
+  const avgAccuracy = scoredUnits.length > 0
+    ? Math.round(scoredUnits.reduce((sum, u) => sum + Math.round((unitHighScores[u.id] ?? 0) * 10), 0) / scoredUnits.length)
+    : 0;
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-8 animate-slide-up space-y-6">
@@ -59,13 +72,12 @@ export default function MyPage({ onBack }: MyPageProps) {
         </button>
         <h1 className="text-2xl font-black text-cyan-400 tracking-wide">내 학습 기록</h1>
         <button
-          onClick={handlePrint}
+          onClick={() => window.print()}
           className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-gray-900 border border-gray-800 hover:border-gray-600 text-gray-400 hover:text-white text-xs font-bold rounded-lg transition-all"
         >
           <Printer className="w-3.5 h-3.5" /> 학부모 리포트 출력
         </button>
       </div>
-      {/* Print header (only visible when printing) */}
       <div className="hidden print:block print:mb-4">
         <h1 className="text-2xl font-black">과학 마스터 도감 — 학습 리포트</h1>
         <p className="text-sm text-gray-600">학생명: {studentName || '(미설정)'} | 출력일: {new Date().toLocaleDateString('ko-KR')}</p>
@@ -93,11 +105,9 @@ export default function MyPage({ onBack }: MyPageProps) {
               <p className="text-[10px] text-gray-500 font-mono">CARDS</p>
             </div>
           </div>
-          {/* XP bar */}
           <div>
             <div className="flex justify-between text-[10px] font-mono text-gray-500 mb-1">
-              <span>XP</span>
-              <span>{xpInLevel}/100</span>
+              <span>XP</span><span>{xpInLevel}/100</span>
             </div>
             <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-800">
               <div
@@ -109,49 +119,122 @@ export default function MyPage({ onBack }: MyPageProps) {
         </div>
       </div>
 
-      {/* Unit Progress */}
+      {/* Achievement Summary */}
+      <div className="glass-panel p-5 border-yellow-500/10 space-y-4">
+        <h3 className="text-sm font-extrabold text-yellow-400 uppercase tracking-widest flex items-center gap-2">
+          <Trophy className="w-4 h-4" /> 학습 성취 요약
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-3 text-center">
+            <p className="text-2xl font-black text-emerald-400">{completedUnits.length}<span className="text-sm text-gray-500 font-normal">/8</span></p>
+            <p className="text-[10px] text-gray-500 mt-0.5">완료 단원</p>
+            <div className="flex gap-0.5 justify-center mt-2">
+              {UNITS.map(u => (
+                <div
+                  key={u.id}
+                  className={`w-2 h-2 rounded-full ${completedUnits.includes(u.id) ? 'bg-emerald-400' : 'bg-gray-800'}`}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-3 text-center">
+            <p className="text-2xl font-black text-cyan-400">{avgAccuracy > 0 ? `${avgAccuracy}%` : '—'}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">평균 정답률</p>
+            {avgAccuracy > 0 && (
+              <div className="mt-2 h-1.5 bg-gray-900 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${avgAccuracy >= 80 ? 'bg-emerald-400' : avgAccuracy >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                  style={{ width: `${avgAccuracy}%` }}
+                />
+              </div>
+            )}
+          </div>
+          <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-3 text-center">
+            <p className="text-2xl font-black text-purple-400">{unlockedCardIds.length}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">보유 카드</p>
+            <div className="mt-2 h-1.5 bg-gray-900 rounded-full overflow-hidden">
+              <div className="h-full bg-purple-400 rounded-full" style={{ width: `${(unlockedCardIds.length / totalCards) * 100}%` }} />
+            </div>
+          </div>
+          <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-3 text-center">
+            <p className="text-2xl">{bestUnit ? bestUnit.icon : '—'}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">최고의 단원</p>
+            {bestUnit && (
+              <p className="text-[9px] text-yellow-300 mt-0.5 leading-tight font-bold">{bestUnit.title}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Journey Map */}
       <div className="glass-panel p-5 border-cyan-500/10 space-y-4">
         <h3 className="text-sm font-extrabold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
-          <BookOpen className="w-4 h-4" /> 단원별 학습 현황
+          <Target className="w-4 h-4" /> 학습 여정
         </h3>
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {UNITS.map(unit => {
             const isComplete = completedUnits.includes(unit.id);
             const highScore = unitHighScores[unit.id] ?? 0;
             const accuracy = Math.round(highScore * 10);
+            const isAttempted = accuracy > 0;
             const unitCards = unlockedCardIds.filter(id => id.startsWith(`u${unit.id}_`));
             const totalUnitCards = cards.filter(c => c.unitId === unit.id).length;
 
             return (
-              <div key={unit.id} className="bg-gray-950/50 border border-gray-900 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{unit.icon}</span>
-                    <div>
-                      <p className="text-xs font-bold text-gray-200">{unit.id}단원. {unit.title}</p>
-                      <p className="text-[10px] font-mono text-gray-600">카드 {unitCards.length}/{totalUnitCards}</p>
+              <div
+                key={unit.id}
+                className={`relative rounded-xl border p-3 transition-all ${
+                  isComplete
+                    ? 'border-emerald-500/40 bg-emerald-950/20'
+                    : isAttempted
+                    ? 'border-cyan-500/30 bg-cyan-950/10'
+                    : 'border-gray-800 bg-gray-950/30 opacity-50'
+                }`}
+              >
+                <div className={`absolute -top-2 -left-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border ${
+                  isComplete
+                    ? 'bg-emerald-500 border-emerald-400 text-white'
+                    : isAttempted
+                    ? 'bg-cyan-700 border-cyan-500 text-white'
+                    : 'bg-gray-900 border-gray-700 text-gray-600'
+                }`}>
+                  {unit.id}
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-xl shrink-0">{unit.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-xs font-bold leading-tight ${
+                      isComplete ? 'text-emerald-300' : isAttempted ? 'text-gray-200' : 'text-gray-600'
+                    }`}>
+                      {unit.title}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {isComplete && (
+                        <span className="px-1.5 py-0.5 bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold rounded">
+                          CLEAR
+                        </span>
+                      )}
+                      {isAttempted && (
+                        <span className={`text-[10px] font-black ${
+                          accuracy >= 80 ? 'text-emerald-400' : accuracy >= 50 ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {accuracy}%
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isComplete && (
-                      <span className="px-1.5 py-0.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold rounded">
-                        CLEAR
-                      </span>
-                    )}
-                    <span className={`text-xs font-black ${accuracy >= 80 ? 'text-emerald-400' : accuracy >= 50 ? 'text-yellow-400' : 'text-gray-500'}`}>
-                      {accuracy > 0 ? `${accuracy}%` : '-'}
-                    </span>
+                </div>
+                {isAttempted && (
+                  <div className="mt-2 h-1 bg-gray-900 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${isComplete ? 'bg-emerald-500' : 'bg-cyan-500'}`}
+                      style={{ width: `${accuracy}%` }}
+                    />
                   </div>
-                </div>
-                {/* Progress bar */}
-                <div className="h-1.5 bg-gray-900 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isComplete ? 'bg-emerald-500' : accuracy > 0 ? 'bg-cyan-500' : 'bg-gray-800'
-                    }`}
-                    style={{ width: `${Math.max(accuracy, unitCards.length > 0 ? 5 : 0)}%` }}
-                  />
-                </div>
+                )}
+                <p className={`text-[9px] font-mono mt-1 ${isAttempted ? 'text-gray-600' : 'text-gray-700'}`}>
+                  카드 {unitCards.length}/{totalUnitCards}
+                </p>
               </div>
             );
           })}
@@ -191,14 +274,17 @@ export default function MyPage({ onBack }: MyPageProps) {
             <AlertCircle className="w-4 h-4" /> 오답 노트 ({wrongQuestions.length}문항)
           </h3>
           <div className="space-y-3">
-            {wrongQuestions.map((q) => {
-              if (!q) return null;
+            {wrongQuestions.map(q => {
+              const unitInfo = UNITS.find(u => u.id === q.unitId);
               return (
                 <div key={q.id} className="bg-gray-950/60 border border-red-900/30 rounded-xl p-3 space-y-2">
+                  {unitInfo && (
+                    <p className="text-[9px] font-mono text-gray-600">{unitInfo.icon} {unitInfo.id}단원 · {unitInfo.title}</p>
+                  )}
                   <p className="text-xs font-bold text-white leading-relaxed">{q.question}</p>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-emerald-300">{(q as MCQuestion).options[(q as MCQuestion).correctIndex]}</p>
+                    <p className="text-xs text-emerald-300">{getCorrectAnswerText(q)}</p>
                   </div>
                   {q.explanation && (
                     <p className="text-[10px] text-gray-500 leading-relaxed">{q.explanation}</p>
