@@ -193,7 +193,11 @@ class GameStateManager {
       import('./supabase-client').then(({ supabase }) => {
         supabase.channel('classroom_session_global')
           .on('broadcast', { event: 'session_update' }, ({ payload }: { payload: ClassroomSession }) => {
-            if (payload) {
+            if (!payload) return;
+            const isTeacher = this.state.role === 'teacher';
+            const playerSessionCode = localStorage.getItem('science_pokedex_player_session_code') || '';
+            // 교사는 항상 수신, 학생은 자신이 입장한 세션 코드와 일치할 때만 수신
+            if (isTeacher || !playerSessionCode || playerSessionCode === payload.code) {
               this.state.classroomSession = payload;
               this.save();
             }

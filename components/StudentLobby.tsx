@@ -242,16 +242,19 @@ export default function StudentLobby({
     };
   }, [sessionCode, studentName, studentAvatar, playerPos, equippedCosmetics, progress.unlockedCardIds]);
 
-  // Check if session has started
+  // Check if session has started — 입장한 세션 코드와 일치할 때만 퀴즈/레이드 시작
   useEffect(() => {
-    if (classroomSession && classroomSession.status === 'playing') {
+    if (!classroomSession || !sessionCode) return;
+    const codeMatch = classroomSession.code === sessionCode;
+    if (!codeMatch) return;
+    if (classroomSession.status === 'playing') {
       gameAudio.playClick();
       onStartQuiz(classroomSession.activeUnitId);
-    } else if (classroomSession && (classroomSession.status as string) === 'raid') {
+    } else if ((classroomSession.status as string) === 'raid') {
       gameAudio.playClick();
       if (onStartRaid) onStartRaid();
     }
-  }, [classroomSession?.status, classroomSession?.activeUnitId, onStartQuiz, onStartRaid]);
+  }, [classroomSession?.status, classroomSession?.activeUnitId, sessionCode, onStartQuiz, onStartRaid]);
 
   // 2. Simulated lobby spawning & AI movement effect
   useEffect(() => {
@@ -461,6 +464,8 @@ export default function StudentLobby({
     if (!code) return;
     gameAudio.playClick();
     setSessionCode(code);
+    // game-state.ts 전역 브로드캐스트 필터에 사용
+    localStorage.setItem('science_pokedex_player_session_code', code);
     setShowNicknameModal(true);
   };
 
