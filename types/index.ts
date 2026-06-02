@@ -93,6 +93,7 @@ interface BaseQuestion {
   unitId: number;
   question: string;
   explanation: string;
+  hint?: string;
   difficulty?: 'easy' | 'medium' | 'hard';
   cardReward?: string;
 }

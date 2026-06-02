@@ -252,6 +252,10 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
   // Explanation display timer state
   const [explanationVisible, setExplanationVisible] = useState(false);
 
+  // Self-directed learning: learner controls when to advance
+  const [isReadyToAdvance, setIsReadyToAdvance] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+
   // Newly Unlocked Cards list
   const [newlyUnlockedCardIds, setNewlyUnlockedCardIds] = useState<string[]>([]);
 
@@ -328,11 +332,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
 
     setTimeout(() => {
       setFlashType(null);
-      // Wait for user to read or auto-advance
-      setTimeout(() => {
-        setExplanationVisible(false);
-        handleNext();
-      }, 3000);
+      setIsReadyToAdvance(true);
     }, 800);
   };
 
@@ -440,17 +440,11 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
       // Flash effect duration: 800ms
       setTimeout(() => {
         setFlashType(null);
-        // If capture game was triggered, do NOT auto-advance quiz yet
+        // If capture game was triggered, do NOT show advance button yet
         if (response.correct && response.cardUnlocked && cards.find(c => c.id === response.cardUnlocked)?.rarity === 'rare') {
-          // Pause and let the capture screen take over
           return;
         }
-
-        // Standard auto-advance after explanation shown (800ms more for readability)
-        setTimeout(() => {
-          setExplanationVisible(false);
-          handleNext();
-        }, 2200);
+        setIsReadyToAdvance(true);
       }, 800);
 
     } catch (error) {
@@ -475,7 +469,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
       setStreak(0); setFlashType('wrong'); gameAudio.playWrong(); addWrongAnswer(q.id);
     }
     setExplanationVisible(true);
-    setTimeout(() => { setFlashType(null); setTimeout(() => { setExplanationVisible(false); handleNext(); }, 2200); }, 800);
+    setTimeout(() => { setFlashType(null); setIsReadyToAdvance(true); }, 800);
   };
 
   const handleOXAnswer = (selectedIndex: 0 | 1) => {
@@ -485,12 +479,14 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
   };
 
   const handleNext = () => {
+    setIsReadyToAdvance(false);
+    setShowHint(false);
+    setExplanationVisible(false);
     if (currentIndex < 9) {
       setCurrentIndex(prev => prev + 1);
       setSelectedOption(null);
       setIsAnswered(false);
     } else {
-      // Completed standard quiz
       onQuizComplete(score, newlyUnlockedCardIds);
     }
   };
@@ -924,6 +920,26 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
               <p className="text-white text-xl md:text-2xl font-black leading-relaxed mt-6">
                 {currentQuestion.question}
               </p>
+
+              {/* Hint section */}
+              {!isAnswered && currentQuestion.hint && (
+                <div className="mt-4 w-full">
+                  {showHint ? (
+                    <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl px-4 py-3 text-left animate-slide-up">
+                      <p className="text-amber-300 text-sm font-medium leading-relaxed">
+                        💡 {currentQuestion.hint}
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { gameAudio.playClick(); setShowHint(true); }}
+                      className="text-xs text-amber-500/70 hover:text-amber-400 border border-amber-500/20 hover:border-amber-500/50 px-3 py-1.5 rounded-lg transition-all font-medium"
+                    >
+                      💡 힌트 보기
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1025,6 +1041,16 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
                   </p>
                 </div>
               </div>
+
+              {/* Learner-controlled advance button */}
+              {isReadyToAdvance && (
+                <button
+                  onClick={() => { gameAudio.playClick(); handleNext(); }}
+                  className="mt-4 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-black rounded-xl transition-all touch-target flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.25)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] text-base"
+                >
+                  {currentIndex < 9 ? '다음 문제 ▶' : '결과 보기 🏆'}
+                </button>
+              )}
             </div>
           )}
 
@@ -1035,7 +1061,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
           
           {/* Current Score Panel */}
           <div className="glass-panel p-5 border-cyan-500/10 bg-[#090f1d]/50 relative text-center">
-            <h3 className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest mb-3">// SCORE BOARD</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">📊 점수판</h3>
             <div className="text-5xl font-black font-mono-numbers text-cyan-400 filter drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">
               {score * 10} <span className="text-xs text-gray-500">점</span>
             </div>
