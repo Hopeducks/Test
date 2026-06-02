@@ -218,9 +218,18 @@ export default function TeacherDashboard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classroomSession?.status, classroomSession?.currentQuestionIndex]);
 
-  const handleStartLobby = () => {
+  const handleStartLobby = async () => {
     gameAudio.playClick();
+    // 6자리 영문+숫자 세션 코드 생성
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Supabase game_sessions 테이블에 세션 등록 (오프라인이면 무시됨)
+    await supabase.from('game_sessions').insert({
+      code,
+      status: 'lobby',
+      active_unit_id: selectedUnitId,
+    });
     setClassroomSession({
+      code,
       activeUnitId: selectedUnitId,
       status: 'lobby',
       currentQuestionIndex: 0,
