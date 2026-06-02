@@ -143,9 +143,10 @@ export default function Home() {
         {/* Subtle scanline background pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none opacity-20 z-40" />
         <RoleSelector 
-          onSelectStudent={(name, avatar) => {
+          onSelectStudent={(name, avatar, sessionCode) => {
             setStudentProfile(name, avatar);
             setRole('student');
+            // session code는 RoleSelector에서 이미 localStorage에 저장됨
             setActiveScreen('lobby');
           }}
           onSelectTeacher={() => {

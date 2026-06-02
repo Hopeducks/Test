@@ -5,7 +5,7 @@ import { gameAudio } from '../lib/audio';
 import { User, ShieldAlert, ChevronRight } from 'lucide-react';
 
 interface RoleSelectorProps {
-  onSelectStudent: (name: string, avatar: string) => void;
+  onSelectStudent: (name: string, avatar: string, sessionCode: string) => void;
   onSelectTeacher: () => void;
 }
 
@@ -23,13 +23,17 @@ const AVATARS = [
 ];
 
 export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleSelectorProps) {
-  const [mode, setMode] = useState<'select' | 'student-profile' | 'teacher-password'>('select');
+  const [mode, setMode] = useState<'select' | 'student-profile' | 'student-code' | 'teacher-password'>('select');
   const [studentName, setStudentName] = useState('');
   const [gender, setGender] = useState<'남' | '여'>('남');
   const [selectedClass, setSelectedClass] = useState<number>(1);
   const [selectedNumber, setSelectedNumber] = useState<number>(1);
   const [selectedAvatar, setSelectedAvatar] = useState('👦');
   const [errorMsg, setErrorMsg] = useState('');
+  const [sessionCodeInput, setSessionCodeInput] = useState('');
+  const [sessionCodeError, setSessionCodeError] = useState('');
+  const [pendingName, setPendingName] = useState('');
+  const [pendingAvatar, setPendingAvatar] = useState('');
   const [teacherPin, setTeacherPin] = useState('');
   const [pinError, setPinError] = useState('');
 
@@ -81,7 +85,7 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
   const handleStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     gameAudio.playClick();
-    
+
     const trimmed = studentName.trim();
     if (!trimmed) {
       setErrorMsg('이름 또는 닉네임을 입력해주세요.');
@@ -92,9 +96,28 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
       return;
     }
 
-    // Format the final student name as "${className}반 ${classNumber}번 ${studentName}"
     const formattedName = `${selectedClass}반 ${selectedNumber}번 ${trimmed}`;
-    onSelectStudent(formattedName, selectedAvatar);
+    setPendingName(formattedName);
+    setPendingAvatar(selectedAvatar);
+    setSessionCodeInput('');
+    setSessionCodeError('');
+    setMode('student-code');
+  };
+
+  const handleSessionCodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = sessionCodeInput.trim().toUpperCase();
+    if (!code) {
+      setSessionCodeError('참여 코드를 입력해주세요.');
+      return;
+    }
+    if (code.length < 4) {
+      setSessionCodeError('올바른 참여 코드를 입력해주세요.');
+      return;
+    }
+    gameAudio.playCorrect();
+    localStorage.setItem('science_pokedex_player_session_code', code);
+    onSelectStudent(pendingName, pendingAvatar, code);
   };
 
   return (
@@ -362,6 +385,35 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
                 입장하기
               </button>
             </div>
+          </form>
+        </div>
+      )}
+
+      {mode === 'student-code' && (
+        <div className="w-full max-w-md glass-panel p-8 border-cyan-500/30 bg-gray-950/50 shadow-2xl relative">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+          <div className="text-center mb-6">
+            <div className="text-3xl mb-2">🔑</div>
+            <h2 className="text-xl font-black text-cyan-400">참여 코드 입력</h2>
+            <p className="text-xs font-mono text-gray-500 mt-1">교사에게 받은 6자리 코드를 입력하세요</p>
+          </div>
+          <form onSubmit={handleSessionCodeSubmit} className="space-y-4">
+            <input
+              type="text"
+              value={sessionCodeInput}
+              onChange={e => { setSessionCodeInput(e.target.value.toUpperCase()); setSessionCodeError(''); }}
+              placeholder="예: A1B2C3"
+              maxLength={8}
+              autoFocus
+              className="w-full px-4 py-3 bg-gray-900 border border-cyan-500/30 rounded-lg text-center text-2xl font-black font-mono text-cyan-400 tracking-widest placeholder:text-gray-600 focus:outline-none focus:border-cyan-400"
+            />
+            {sessionCodeError && <p className="text-red-400 text-xs text-center font-mono">{sessionCodeError}</p>}
+            <button type="submit" className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-lg transition-all">
+              입장하기
+            </button>
+            <button type="button" onClick={() => setMode('student-profile')} className="w-full py-2 text-gray-500 hover:text-gray-300 text-xs font-mono transition-all">
+              ← 이름 입력으로 돌아가기
+            </button>
           </form>
         </div>
       )}
