@@ -8,7 +8,13 @@ import { UNITS } from './PokedexHome';
 import { gameAudio } from '../lib/audio';
 import CardUnlockAnim from './CardUnlockAnim';
 import { Award, RefreshCw, Share2, Sparkles, CheckCircle, MapPin, BookOpen } from 'lucide-react';
-import { supabase } from '../lib/supabase-client';
+
+interface LegendaryBroadcastData {
+  playerName: string;
+  playerAvatar: string;
+  cardName: string;
+  cardEmoji: string;
+}
 
 interface UnitCompleteProps {
   unitId: number;
@@ -18,6 +24,7 @@ interface UnitCompleteProps {
   onGoHome: () => void;
   onGoLobby?: () => void;
   onReviewWrongAnswers?: (questionIds: string[]) => void;
+  onLegendaryBroadcast?: (data: LegendaryBroadcastData) => void;
 }
 
 export default function UnitComplete({
@@ -28,6 +35,7 @@ export default function UnitComplete({
   onGoHome,
   onGoLobby,
   onReviewWrongAnswers,
+  onLegendaryBroadcast,
 }: UnitCompleteProps) {
   const { progress, unlockCard, completeUnit, studentName, studentAvatar } = useGameState();
 
@@ -67,23 +75,12 @@ export default function UnitComplete({
           setShowLegendaryUnlock(true);
         }, 1000);
 
-        // Broadcast legendary unlock to all connected clients
-        const channel = supabase.channel('legendary_announcements_global');
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            channel.send({
-              type: 'broadcast',
-              event: 'legendary_unlock',
-              payload: {
-                playerName: studentName || '학생',
-                playerAvatar: studentAvatar || '⚡',
-                cardName: legendaryCard.name,
-                cardEmoji: legendaryCard.image,
-              }
-            });
-            // Unsubscribe after sending
-            setTimeout(() => channel.unsubscribe(), 1000);
-          }
+        // Send via the channel owned by app/page.tsx to avoid killing the shared listener
+        onLegendaryBroadcast?.({
+          playerName: studentName || '학생',
+          playerAvatar: studentAvatar || '⚡',
+          cardName: legendaryCard.name,
+          cardEmoji: legendaryCard.image,
         });
       }
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useGameState from '../lib/game-state';
 import PokedexHome from '../components/PokedexHome';
 import PokedexGrid from '../components/PokedexGrid';
@@ -113,9 +113,13 @@ export default function Home() {
     return () => window.removeEventListener('click', handleInteraction);
   }, []);
 
-  // Listen for legendary card unlock broadcasts from any player
+  // Owns the legendary_announcements_global channel for the app lifetime.
+  // UnitComplete sends through this ref so it never unsubscribes the listener.
+  const legendaryChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
     const channel = supabase.channel('legendary_announcements_global');
+    legendaryChannelRef.current = channel;
     channel
       .on('broadcast', { event: 'legendary_unlock' }, (payload: { payload: { playerName: string; playerAvatar: string; cardName: string; cardEmoji: string } }) => {
         const data = payload.payload;
@@ -127,7 +131,16 @@ export default function Home() {
 
     return () => {
       channel.unsubscribe();
+      legendaryChannelRef.current = null;
     };
+  }, []);
+
+  const handleLegendaryBroadcast = useCallback((data: { playerName: string; playerAvatar: string; cardName: string; cardEmoji: string }) => {
+    legendaryChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'legendary_unlock',
+      payload: data,
+    });
   }, []);
 
   const handleResetProgress = () => {
@@ -375,6 +388,7 @@ export default function Home() {
                 unitId={selectedUnitId}
                 score={quizScore}
                 newlyUnlockedCardIds={newlyUnlockedCards}
+                onLegendaryBroadcast={handleLegendaryBroadcast}
                 onReviewWrongAnswers={(ids) => {
                   setReviewQuestionIds(ids);
                   setQuizKey(prev => prev + 1);

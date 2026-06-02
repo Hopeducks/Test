@@ -129,9 +129,9 @@ export function useSessionStatus(sessionCode: string): GameSession['status'] {
     const channelId = `session_status_tracker_${sessionCode}`;
     const channel = supabase.channel(channelId);
 
-    // PostgreSQL 리얼타임 구독
-    supabase
-      .channel(`db-changes-${sessionCode}`)
+    // PostgreSQL 리얼타임 구독 (변수에 저장해 cleanup 보장)
+    const dbChannel = supabase.channel(`db-changes-${sessionCode}`);
+    dbChannel
       .on(
         'postgres_changes',
         {
@@ -159,7 +159,7 @@ export function useSessionStatus(sessionCode: string): GameSession['status'] {
 
     return () => {
       channel.unsubscribe();
-      supabase.channel(`db-changes-${sessionCode}`).unsubscribe();
+      dbChannel.unsubscribe();
     };
   }, [sessionCode]);
 
