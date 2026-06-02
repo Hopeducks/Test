@@ -12,6 +12,7 @@ export const questions: Question[] = [
     options: ['가장 위쪽 지층', '가장 아래쪽 지층', '가운데 지층', '쌓인 순서는 알 수 없다'],
     correctIndex: 1,
     explanation: '새로운 퇴적물이 기존 지층 위에 쌓이므로, 가장 아래쪽에 있는 지층이 가장 먼저 만들어진 지층입니다.',
+    hint: '새 퇴적물은 기존 층 위에 쌓여요. 먼저 쌓인 것은 위에 있을까요, 아래에 있을까요?',
     cardReward: 'u1_c1'
   },
   {
@@ -21,6 +22,7 @@ export const questions: Question[] = [
     options: ['화성암', '변성암', '퇴적암', '화강암'],
     correctIndex: 2,
     explanation: '퇴적물이 쌓이고 다져지고 굳어져 만들어진 암석을 퇴적암이라고 합니다.',
+    hint: '자갈·모래·진흙 같은 퇴적물이 굳어진 암석이에요. 이름에 힌트가 있어요!',
     cardReward: 'u1_c2'
   },
   {
@@ -30,6 +32,7 @@ export const questions: Question[] = [
     options: ['이암', '사암', '역암', '석회암'],
     correctIndex: 0,
     explanation: '주로 고운 진흙이 굳어져 만들어진 부드러운 퇴적암을 이암이라고 합니다.',
+    hint: '고운 진흙(이토)이 굳어진 암석이에요. 선택지에서 "진흙" 느낌의 이름을 찾아봐요.',
     cardReward: 'u1_c3'
   },
   {
@@ -343,6 +346,7 @@ export const questions: Question[] = [
     options: ['보름달', '거울', '켜진 촛불', '스마트폰 화면에 비친 내 얼굴'],
     correctIndex: 2,
     explanation: '달이나 거울은 빛을 반사할 뿐이며, 스스로 빛을 내뿜는 켜진 촛불이 광원입니다.',
+    hint: '달과 거울은 빛을 반사할 뿐 스스로 빛을 내지 않아요. 스스로 빛을 내는 것은 무엇일까요?',
     cardReward: 'u2_c1'
   },
   {
@@ -352,6 +356,7 @@ export const questions: Question[] = [
     options: ['빛의 반사', '빛의 굴절', '빛의 직진', '빛의 분산'],
     correctIndex: 2,
     explanation: '빛이 장애물이 없는 한 곧게 나아가는 성질을 빛의 직진이라고 합니다.',
+    hint: '손전등 빛이 앞으로 곧게 뻗어 나가요. 이렇게 곧장 나아가는 성질의 이름은 뭘까요?',
     cardReward: 'u2_c2'
   },
   {
@@ -361,6 +366,7 @@ export const questions: Question[] = [
     options: ['빛의 굴절', '빛의 직진', '빛의 반사', '빛의 투과'],
     correctIndex: 2,
     explanation: '빛이 진행하다가 경계면에서 튕겨 나가는 성질을 빛의 반사라고 합니다.',
+    hint: '공이 벽에 부딪혀 튕기듯, 빛도 거울에서 튕겨 나와요. 이 현상의 이름은?',
     cardReward: 'u2_c3'
   },
   {
@@ -674,6 +680,7 @@ export const questions: Question[] = [
     options: ['용매', '용질', '용해', '용액'],
     correctIndex: 0,
     explanation: '용질을 녹여주는 액체 물질을 용매라고 부릅니다.',
+    hint: '소금물에서 소금을 녹이는 것은 물이에요. 녹이는 역할을 하는 것이 용매예요.',
     cardReward: 'u3_c1'
   },
   {
@@ -683,6 +690,7 @@ export const questions: Question[] = [
     options: ['용매', '용질', '용해', '용액'],
     correctIndex: 1,
     explanation: '용매에 녹는 물질(설탕, 소금 등)을 용질이라고 합니다.',
+    hint: '설탕이 물에 녹을 때, 녹는 쪽(설탕)이 용질이에요. "녹는 것"이 용질!',
     cardReward: 'u3_c2'
   },
   {
@@ -692,6 +700,7 @@ export const questions: Question[] = [
     options: ['용해', '융해', '기화', '액화'],
     correctIndex: 0,
     explanation: '용질이 용매에 보이지 않게 고르게 분산되는 현상을 용해라고 합니다.',
+    hint: '소금이 물에 녹아 보이지 않게 되는 현상이에요. 이 과정을 뭐라고 할까요?',
     cardReward: 'u3_c3'
   },
   {
@@ -1005,6 +1014,7 @@ export const questions: Question[] = [
     options: ['뼈와 근육', '위와 장', '심장과 혈관', '콩팥과 방광'],
     correctIndex: 0,
     explanation: '뼈는 신체 지지 및 장기 보호를 담당하고, 근육은 뼈에 붙어 몸을 움직이게 합니다.',
+    hint: '우리 몸의 형태를 지탱하고, 움직임을 만드는 기관이에요. 팔을 구부릴 때 무엇이 쓰일까요?',
     cardReward: 'u4_c1'
   },
   {
@@ -1014,6 +1024,7 @@ export const questions: Question[] = [
     options: ['호흡 기관', '배설 기관', '소화 기관', '순환 기관'],
     correctIndex: 2,
     explanation: '음식물의 분해와 흡수를 담당하는 기관계를 소화 기관이라고 합니다.',
+    hint: '밥을 먹으면 어떤 기관이 음식을 분해해서 영양소로 만들까요? 위, 소장이 포함된 기관이에요.',
     cardReward: 'u4_c2'
   },
   {
@@ -1023,6 +1034,7 @@ export const questions: Question[] = [
     options: ['배설 기관', '감각 기관', '순환 기관', '호흡 기관'],
     correctIndex: 2,
     explanation: '혈액을 순환시켜 필요한 물질을 운반하는 심장과 혈관계를 순환 기관이라고 부릅니다.',
+    hint: '심장이 포함되어 있어요. 혈액을 온몸으로 돌리는 역할을 해요.',
     cardReward: 'u4_c3'
   },
   {
@@ -1336,6 +1348,7 @@ export const questions: Question[] = [
     options: ['생물계', '환경권', '생태계', '자연계'],
     correctIndex: 2,
     explanation: '생태계는 생물과 그 주변 비생물 환경이 상호작용하는 시스템을 의미합니다.',
+    hint: '생물과 환경이 함께 이루는 하나의 시스템이에요. "생태"라는 단어에 힌트가 있어요!',
     cardReward: 'u5_c1'
   },
   {
@@ -1345,6 +1358,7 @@ export const questions: Question[] = [
     options: ['생산자', '소비자', '분해자', '기생자'],
     correctIndex: 1,
     explanation: '양분을 스스로 못 만들어 다른 생물을 섭식하는 생물을 소비자라고 합니다.',
+    hint: '토끼와 여우는 스스로 양분을 못 만들어요. 다른 것을 먹는 존재를 뭐라고 할까요?',
     cardReward: 'u5_c2'
   },
   {
@@ -1354,6 +1368,7 @@ export const questions: Question[] = [
     options: ['생물 요소', '비생물 요소', '인공 요소', '유기적 요소'],
     correctIndex: 1,
     explanation: '생태계에서 생명력을 갖지 않은 자연 환경 구성을 비생물 요소라고 지칭합니다.',
+    hint: '햇빛, 물, 공기, 흙은 살아있는 생물인가요? 생물이 아닌 환경 요소예요.',
     cardReward: 'u5_c3'
   },
   {
@@ -1667,6 +1682,7 @@ export const questions: Question[] = [
     options: ['건습구 온도계', '최고 최저 온도계', '기압계', '풍향계'],
     correctIndex: 0,
     explanation: '젖은 거즈 물의 증발열 냉각 효과를 이용해 습도를 측정하는 기구를 건습구 온도계라고 합니다.',
+    hint: '두 온도계 중 하나는 마른 것(건구), 하나는 젖은 것(습구)이에요. 이름에 힌트가 있어요!',
     cardReward: 'u6_c1'
   },
   {
@@ -1676,6 +1692,7 @@ export const questions: Question[] = [
     options: ['증발', '응결', '액화', '융해'],
     correctIndex: 0,
     explanation: '물 표면에서 자유롭게 수증기로 기화하는 현상을 증발이라고 합니다.',
+    hint: '빨아둔 옷이 자연히 마르는 것도 이 현상이에요. 물이 기체(수증기)로 변해 날아가요.',
     cardReward: 'u6_c2'
   },
   {
@@ -1684,6 +1701,7 @@ export const questions: Question[] = [
     question: '공기 중의 보이지 않는 수증기가 찬 공기나 물체를 만나 온도가 내려가면서 액체인 물방울로 변하는 현상은 무엇일까요?',
     options: ['증발', '응결', '기화', '승화'],
     correctIndex: 1,
+    hint: '차가운 컵 겉면에 물방울이 맺히는 것도 이 현상이에요. 수증기 → 물방울로 변해요.',
     explanation: '기체인 수증기가 온도가 낮아지며 액체인 물로 변환되는 과정을 응결이라고 합니다.',
     cardReward: 'u6_c3'
   },
@@ -1998,6 +2016,7 @@ export const questions: Question[] = [
     options: ['위치', '이동 거리', '속력', '궤도'],
     correctIndex: 0,
     explanation: '물체의 위치는 기준점, 방향, 거리의 3요소를 사용해 나타내는 물리적 정보입니다.',
+    hint: '"학교에서 북쪽으로 100m"처럼 기준점·방향·거리로 나타내는 것이에요.',
     cardReward: 'u7_c1'
   },
   {
@@ -2007,6 +2026,7 @@ export const questions: Question[] = [
     options: ['속력', '위치', '이동 거리', '시간'],
     correctIndex: 2,
     explanation: '움직인 선의 실질적 궤적 총합을 이동 거리라고 합니다.',
+    hint: '공원을 한 바퀴 돌았을 때 실제로 걸은 경로의 전체 길이예요.',
     cardReward: 'u7_c2'
   },
   {
@@ -2015,6 +2035,7 @@ export const questions: Question[] = [
     question: '물체가 이동하는 데 드는 시각의 간격을 나타내며, 초, 분, 시간 등의 단위로 재는 것은 무엇일까요?',
     options: ['거리', '속력', '걸린 시간', '방향'],
     correctIndex: 2,
+    hint: '스톱워치로 재는 것이에요. 초, 분, 시간 단위를 쓰는 물리량은 뭘까요?',
     explanation: '운동 시작부터 끝 시각의 차를 걸린 시간이라고 합니다.',
     cardReward: 'u7_c3'
   },
@@ -2329,6 +2350,7 @@ export const questions: Question[] = [
     options: ['산성', '염기성', '중성', '포화성'],
     correctIndex: 0,
     explanation: '신맛을 내고 푸른 리트머스를 붉게 유도하는 용액의 성질을 산성이라고 규정합니다.',
+    hint: '레몬즙과 식초는 신맛이 나고 리트머스를 붉게 바꿔요. 이런 성질을 뭐라고 할까요?',
     cardReward: 'u8_c1'
   },
   {
@@ -2338,6 +2360,7 @@ export const questions: Question[] = [
     options: ['산성', '염기성', '중성', '산도'],
     correctIndex: 1,
     explanation: '쓴맛, 미끈거림, 붉은 종이를 푸르게 유도하는 용액 성질을 염기성이라고 규정합니다.',
+    hint: '비눗물처럼 미끈미끈하고 쓴맛이 나요. 붉은 리트머스를 푸르게 바꾸는 성질이에요.',
     cardReward: 'u8_c2'
   },
   {
@@ -2346,6 +2369,7 @@ export const questions: Question[] = [
     question: '용액의 성질이 산성인지 염기성인지에 따라 색깔이 마법처럼 바뀌어 액성을 쉽게 알아내게 돕는 특수 물질을 통틀어 무엇이라고 할까요?',
     options: ['용매', '용질', '지시약', '중화제'],
     correctIndex: 2,
+    hint: '산성·염기성에 따라 색이 변하는 물질이에요. 리트머스 종이도 이것의 일종이에요.',
     explanation: '색깔 변화 반응을 통해 미지 용액의 산도 성질을 판독하게 해주는 화학 약품을 지시약이라고 부릅니다.',
     cardReward: 'u8_c3'
   },
