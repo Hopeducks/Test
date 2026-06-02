@@ -1066,7 +1066,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                   onClick={() => { gameAudio.playClick(); handleNext(); }}
                   className="mt-4 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-black rounded-xl transition-all touch-target flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.25)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] text-base"
                 >
-                  {currentIndex < 9 ? '다음 문제 ▶' : '결과 보기 🏆'}
+                  {currentIndex < questionsList.length - 1 ? '다음 문제 ▶' : '결과 보기 🏆'}
                 </button>
               )}
             </div>
