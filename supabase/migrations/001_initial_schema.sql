@@ -76,6 +76,14 @@ ALTER TABLE game_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_answers  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questions     ENABLE ROW LEVEL SECURITY;
 
+-- 멱등성: 기존 정책을 먼저 삭제 후 재생성
+DROP POLICY IF EXISTS "players_session_read" ON players;
+DROP POLICY IF EXISTS "players_own_insert"   ON players;
+DROP POLICY IF EXISTS "players_own_update"   ON players;
+DROP POLICY IF EXISTS "sessions_public_read" ON game_sessions;
+DROP POLICY IF EXISTS "answers_own_insert"   ON quiz_answers;
+DROP POLICY IF EXISTS "questions_public_read" ON questions;
+
 -- players: 같은 세션 참여자만 읽기 / 자신만 수정
 CREATE POLICY "players_session_read" ON players
   FOR SELECT USING (session_code = current_setting('app.session_code', true));
@@ -89,6 +97,13 @@ CREATE POLICY "players_own_update" ON players
 -- game_sessions: 누구나 읽기 가능 (세션 코드를 아는 사람)
 CREATE POLICY "sessions_public_read" ON game_sessions
   FOR SELECT USING (true);
+
+-- game_sessions: 교사가 세션 생성/업데이트 가능
+CREATE POLICY "sessions_public_insert" ON game_sessions
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "sessions_public_update" ON game_sessions
+  FOR UPDATE USING (true);
 
 -- quiz_answers: 자신의 기록만 삽입
 CREATE POLICY "answers_own_insert" ON quiz_answers
