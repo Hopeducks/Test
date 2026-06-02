@@ -90,7 +90,7 @@ export default function Home() {
   } | null>(null);
 
   // Global calculations
-  const totalCards = 80;
+  const totalCards = cards.length;
   const unlockedCount = unlockedCardIds.length;
   const completionPercentage = Math.round((unlockedCount / totalCards) * 100);
 

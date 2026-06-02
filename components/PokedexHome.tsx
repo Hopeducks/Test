@@ -29,7 +29,7 @@ export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage,
   const { unlockedCardIds, unitHighScores } = progress;
 
   // Calculate global stats
-  const totalCards = 80;
+  const totalCards = cards.length;
   const unlockedCount = unlockedCardIds.length;
   const completionPercentage = Math.round((unlockedCount / totalCards) * 100);
 

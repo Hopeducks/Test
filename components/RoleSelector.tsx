@@ -25,10 +25,9 @@ const AVATARS = [
 export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleSelectorProps) {
   const [mode, setMode] = useState<'select' | 'student-profile' | 'student-code' | 'teacher-password'>('select');
   const [studentName, setStudentName] = useState('');
-  const [gender, setGender] = useState<'남' | '여'>('남');
   const [selectedClass, setSelectedClass] = useState<number>(1);
   const [selectedNumber, setSelectedNumber] = useState<number>(1);
-  const [selectedAvatar, setSelectedAvatar] = useState('👦');
+  const [selectedAvatar, setSelectedAvatar] = useState('⚡');
   const [errorMsg, setErrorMsg] = useState('');
   const [sessionCodeInput, setSessionCodeInput] = useState('');
   const [sessionCodeError, setSessionCodeError] = useState('');
@@ -51,12 +50,6 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
     } else {
       setMode('student-profile');
     }
-  };
-
-  const handleGenderChange = (newGender: '남' | '여') => {
-    gameAudio.playClick();
-    setGender(newGender);
-    setSelectedAvatar(newGender === '남' ? '👦' : '👧');
   };
 
   const handlePinKeyPress = (num: string) => {
@@ -127,8 +120,8 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
         <h1 className="text-4xl md:text-5xl font-black text-cyan-400 tracking-wider mb-3 drop-shadow-[0_0_15px_rgba(6,182,212,0.4)]">
           과학 마스터 도감
         </h1>
-        <p className="text-gray-400 font-mono text-sm tracking-widest uppercase">
-          // SYSTEM INITIALIZATION: SELECT ACCESS ROLE
+        <p className="text-gray-400 text-sm mt-1">
+          과학 지식으로 세상을 탐험하세요!
         </p>
       </div>
 
@@ -154,8 +147,8 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
               </p>
             </div>
 
-            <div className="mt-6 flex items-center text-cyan-400 font-mono text-xs tracking-wider gap-1">
-              CONNECT PLAYER <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="mt-6 flex items-center text-cyan-400 text-sm font-bold gap-1">
+              학생으로 입장 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
 
@@ -179,8 +172,8 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
               </p>
             </div>
 
-            <div className="mt-6 flex items-center text-amber-400 font-mono text-xs tracking-wider gap-1">
-              CONNECT ADMINISTRATOR <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="mt-6 flex items-center text-amber-400 text-sm font-bold gap-1">
+              교사로 입장 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
         </div>
@@ -195,40 +188,35 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
           </h2>
 
           <form onSubmit={handleStudentSubmit} className="space-y-6">
-            {/* 학급 정보 선택 (반, 번호, 성별) */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-450 mb-1.5 uppercase tracking-wider">
-                  성별
-                </label>
-                <div className="flex bg-gray-900 border border-gray-800 rounded-lg p-1">
+            {/* 과학 아바타 선택 */}
+            <div>
+              <label className="block text-xs font-bold text-gray-400 mb-2 tracking-wider">
+                나만의 과학 아바타 선택
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {AVATARS.map(({ char, label }) => (
                   <button
+                    key={char}
                     type="button"
-                    onClick={() => handleGenderChange('남')}
-                    className={`flex-1 py-1.5 text-xs font-black rounded-md transition-all ${
-                      gender === '남'
-                        ? 'bg-blue-600 text-white shadow'
-                        : 'text-gray-450 hover:text-white'
+                    onClick={() => { gameAudio.playClick(); setSelectedAvatar(char); }}
+                    className={`py-2.5 bg-gray-900 border rounded-lg text-center text-2xl transition-all ${
+                      selectedAvatar === char
+                        ? 'border-cyan-500 bg-cyan-950/30 shadow-[0_0_10px_rgba(6,182,212,0.3)] scale-105'
+                        : 'border-gray-800 hover:border-gray-600'
                     }`}
+                    title={label}
                   >
-                    남
+                    {char}
+                    <span className="text-[10px] font-bold block mt-0.5 text-gray-400">{label}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGenderChange('여')}
-                    className={`flex-1 py-1.5 text-xs font-black rounded-md transition-all ${
-                      gender === '여'
-                        ? 'bg-pink-600 text-white shadow'
-                        : 'text-gray-450 hover:text-white'
-                    }`}
-                  >
-                    여
-                  </button>
-                </div>
+                ))}
               </div>
+            </div>
 
+            {/* 반/번호 선택 */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-450 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-400 mb-1.5 tracking-wider">
                   반 선택
                 </label>
                 <select
@@ -240,15 +228,12 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-100 focus:outline-none focus:border-cyan-500 text-sm font-bold"
                 >
                   {[1, 2, 3, 4, 5, 6, 7].map((c) => (
-                    <option key={c} value={c}>
-                      {c}반
-                    </option>
+                    <option key={c} value={c}>{c}반</option>
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-bold text-gray-450 mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-400 mb-1.5 tracking-wider">
                   번호 선택
                 </label>
                 <select
@@ -260,83 +245,9 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-lg text-gray-100 focus:outline-none focus:border-cyan-500 text-sm font-bold"
                 >
                   {Array.from({ length: 40 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n}번
-                    </option>
+                    <option key={n} value={n}>{n}번</option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* Avatar Sub-Selector based on Gender */}
-            <div>
-              <label className="block text-xs font-bold text-gray-450 mb-2 uppercase tracking-wider">
-                아바타 캐릭터 선택
-              </label>
-              <div className="flex gap-4">
-                {gender === '남' ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        gameAudio.playClick();
-                        setSelectedAvatar('👦');
-                      }}
-                      className={`flex-1 py-3 bg-gray-900 border rounded-lg text-center text-3xl transition-all ${
-                        selectedAvatar === '👦'
-                          ? 'border-cyan-500 bg-cyan-950/20 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                          : 'border-gray-800 text-gray-400 hover:border-gray-700'
-                      }`}
-                    >
-                      👦 <span className="text-xs font-bold block mt-1 text-gray-300">소년</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        gameAudio.playClick();
-                        setSelectedAvatar('🧑');
-                      }}
-                      className={`flex-1 py-3 bg-gray-900 border rounded-lg text-center text-3xl transition-all ${
-                        selectedAvatar === '🧑'
-                          ? 'border-cyan-500 bg-cyan-950/20 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                          : 'border-gray-800 text-gray-400 hover:border-gray-700'
-                      }`}
-                    >
-                      🧑 <span className="text-xs font-bold block mt-1 text-gray-300">청년</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        gameAudio.playClick();
-                        setSelectedAvatar('👧');
-                      }}
-                      className={`flex-1 py-3 bg-gray-900 border rounded-lg text-center text-3xl transition-all ${
-                        selectedAvatar === '👧'
-                          ? 'border-cyan-500 bg-cyan-950/20 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                          : 'border-gray-800 text-gray-400 hover:border-gray-700'
-                      }`}
-                    >
-                      👧 <span className="text-xs font-bold block mt-1 text-gray-300">소녀</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        gameAudio.playClick();
-                        setSelectedAvatar('👩');
-                      }}
-                      className={`flex-1 py-3 bg-gray-900 border rounded-lg text-center text-3xl transition-all ${
-                        selectedAvatar === '👩'
-                          ? 'border-cyan-500 bg-cyan-950/20 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                          : 'border-gray-800 text-gray-400 hover:border-gray-700'
-                      }`}
-                    >
-                      👩 <span className="text-xs font-bold block mt-1 text-gray-300">여성</span>
-                    </button>
-                  </>
-                )}
               </div>
             </div>
 
@@ -425,8 +336,8 @@ export default function RoleSelector({ onSelectStudent, onSelectTeacher }: RoleS
 
           <div className="space-y-2">
             <h2 className="text-2xl font-black text-amber-500">교사용 비밀번호 입력</h2>
-            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest leading-none">
-              // PIN CODE VERIFICATION REQUIRED // PASSCODE: 2026
+            <p className="text-xs text-gray-500">
+              교사용 4자리 PIN을 입력하세요
             </p>
           </div>
 

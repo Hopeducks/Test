@@ -162,7 +162,7 @@ export default function TeacherDashboard({
           const existingStudent = currentSession.students.find(s => s.name === p.nickname);
           return {
             name: p.nickname,
-            avatar: existingStudent?.avatar || (p.avatar?.gender === 'female' ? '👧' : '👦'),
+            avatar: existingStudent?.avatar || '🔬',
             isSimulated: false,
             currentScore: correctAnswers.length,
             currentStreak,

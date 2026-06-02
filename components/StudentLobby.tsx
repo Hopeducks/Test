@@ -486,7 +486,8 @@ export default function StudentLobby({
       const isLocked = targetUnitId > 1 && !progress.unlockedBadges?.includes(`accessory_badge_u${targetUnitId - 1}`);
       if (isLocked) {
         gameAudio.playWrong();
-        alert(`🔒 이 단원은 잠겨 있습니다! 이전 단원의 체육관 관장을 격퇴하고 [지층 배지] 등 직전 배지를 획득해야 입장할 수 있습니다.`);
+        setNoticeText('🔒 이 단원은 잠겨 있습니다! 이전 단원 배지를 획득해야 입장할 수 있습니다.');
+        setTimeout(() => setNoticeText(''), 4000);
         return;
       }
       gameAudio.playClick();
@@ -612,62 +613,78 @@ export default function StudentLobby({
 
       {!joinedPlayer && !classroomSession && !isSimulatedLobby ? (
         /* Lobby Entry Selector & Session Join Screen */
-        <div className="max-w-2xl mx-auto text-center py-12 px-6 glass-panel border-cyan-500/10 bg-cyan-950/5">
-          <div className="w-16 h-16 rounded-full border border-dashed border-cyan-500/30 flex items-center justify-center mx-auto mb-6 text-cyan-400/70 animate-pulse">
-            <User className="w-8 h-8" />
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+          {/* 환영 헤더 */}
+          <div className="text-center">
+            <div className="text-5xl mb-3 animate-bounce" style={{ animationDuration: '2s' }}>🔬</div>
+            <h2 className="text-2xl font-black text-gray-100 mb-2">
+              과학 탐험 세계에 오신 것을 환영합니다!
+            </h2>
+            <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
+              선생님께 받은 참여 코드로 실시간 수업에 참가하거나, 혼자서 단원을 골라 연습해보세요.
+            </p>
           </div>
-          
-          <h2 className="text-2xl font-bold text-gray-100 mb-4">
-            교실 메타버스 접속 대기
-          </h2>
-          
-          <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-md mx-auto">
-            선생님이 개설한 교실 세션 코드를 입력하여 실시간 메타버스 로비에 참가하거나, 하단의 모의 플레이 단원을 선택해 솔로 플레이를 진행하세요.
-          </p>
 
-          {/* Join Session Box */}
-          <div className="max-w-sm mx-auto p-4 bg-gray-950/60 border border-cyan-500/10 rounded-xl mb-12">
-            <label className="block text-xs font-mono text-cyan-400 mb-2 uppercase tracking-widest text-left">
-              // CONNECT TO ACTIVE CLASSROOM
-            </label>
+          {/* 실시간 수업 참가 */}
+          <div className="rounded-2xl border-2 border-cyan-500/40 bg-gradient-to-br from-cyan-950/30 to-blue-950/20 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">🎯</span>
+              <div>
+                <h3 className="font-black text-cyan-300 text-base">실시간 수업 참가</h3>
+                <p className="text-xs text-cyan-500/70">선생님이 알려주신 참여 코드를 입력하세요</p>
+              </div>
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="세션 코드 입력 (예: CL01)"
+                placeholder="참여 코드 입력 (예: ABC123)"
                 value={inputSessionCode}
                 onChange={(e) => setInputSessionCode(e.target.value.toUpperCase())}
-                className="flex-1 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-400 text-sm font-bold font-mono"
+                className="flex-1 px-4 py-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-400 text-sm font-bold font-mono tracking-widest"
               />
               <button
                 onClick={handleJoinWithCode}
-                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-black rounded-lg transition-all shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+                className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black text-sm font-black rounded-xl transition-all shadow-[0_4px_20px_rgba(6,182,212,0.4)]"
               >
-                참가
+                참가 →
               </button>
             </div>
           </div>
 
-          <div className="border-t border-gray-900 pt-8 mt-4">
-            <h3 className="text-sm font-mono text-cyan-500 tracking-widest uppercase mb-4">
-              // OR PLAY SOLO WITH AI CLASSMATES (모의 플레이 단원 선택)
-            </h3>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto">
+          {/* 혼자 연습하기 */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">📚</span>
+              <h3 className="font-black text-gray-200 text-base">혼자 연습하기</h3>
+              <span className="text-xs text-gray-500 font-normal">단원을 골라 AI 친구들과 함께 복습!</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((unitId) => {
                 const isLocked = unitId > 1 && !progress.unlockedBadges?.includes(`accessory_badge_u${unitId - 1}`);
+                const unitColors = [
+                  'from-amber-950/40 border-amber-500/30 hover:border-amber-400',
+                  'from-blue-950/40 border-blue-500/30 hover:border-blue-400',
+                  'from-emerald-950/40 border-emerald-500/30 hover:border-emerald-400',
+                  'from-rose-950/40 border-rose-500/30 hover:border-rose-400',
+                  'from-violet-950/40 border-violet-500/30 hover:border-violet-400',
+                  'from-sky-950/40 border-sky-500/30 hover:border-sky-400',
+                  'from-orange-950/40 border-orange-500/30 hover:border-orange-400',
+                  'from-teal-950/40 border-teal-500/30 hover:border-teal-400',
+                ];
                 return (
                   <button
                     key={unitId}
                     disabled={isLocked}
                     onClick={() => handleInitSimulatedLobby(unitId)}
-                    className={`p-3 border rounded-lg text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 touch-target ${
+                    className={`p-3 border rounded-xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 touch-target bg-gradient-to-b ${
                       isLocked
-                        ? 'bg-gray-950/20 border-gray-950 text-gray-650 opacity-40 cursor-not-allowed'
-                        : 'bg-gray-900 border-gray-800 text-gray-300 hover:border-cyan-500/50 hover:text-cyan-400'
+                        ? 'from-gray-950/20 border-gray-800 text-gray-600 opacity-40 cursor-not-allowed'
+                        : `${unitColors[unitId - 1]} text-gray-200 active:scale-95`
                     }`}
                   >
-                    <span className="text-lg">{isLocked ? '🔒' : getUnitIcon(unitId)}</span>
-                    <span className="line-clamp-1">{unitId}단원 복습</span>
+                    <span className="text-xl">{isLocked ? '🔒' : getUnitIcon(unitId)}</span>
+                    <span className="line-clamp-1 font-bold">{unitId}단원</span>
+                    <span className="text-[10px] opacity-70 line-clamp-1">{getUnitTitle(unitId)}</span>
                   </button>
                 );
               })}
@@ -682,8 +699,8 @@ export default function StudentLobby({
           {/* Left Panel: Info & Control Buttons */}
           <div className="lg:col-span-1 space-y-4 flex flex-col justify-start">
             <div className="glass-panel p-5 border-cyan-500/20 bg-cyan-950/5 relative overflow-hidden">
-              <div className="text-[10px] font-mono text-cyan-500 tracking-widest mb-1">
-                METAVERSE SCIENCE ARENA
+              <div className="text-[10px] font-bold text-cyan-500 tracking-wider mb-1">
+                🌍 과학 탐험 메타버스
               </div>
               <h2 className="text-xl font-bold text-gray-100 line-clamp-1">
                 {currentUnit.icon} {classroomSession ? `${classroomSession.activeUnitId}단원` : `${chosenUnitId}단원`} 복습
@@ -704,7 +721,7 @@ export default function StudentLobby({
                 return (
                   <div className="p-3 mb-4 bg-cyan-950/20 border border-cyan-500/10 rounded-xl space-y-1.5 font-mono select-none">
                     <div className="flex justify-between items-baseline">
-                      <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">// TRAINER RANK</span>
+                      <span className="text-[9px] font-bold text-cyan-400 tracking-wider">⭐ 트레이너 랭크</span>
                       <span className="text-[10px] font-black text-amber-400">LV.{trainer.level}</span>
                     </div>
                     <div className="text-xs font-black text-white font-sans">{trainer.rank}</div>
@@ -723,7 +740,7 @@ export default function StudentLobby({
                         </div>
                       </div>
                     ) : (
-                      <div className="text-[8px] text-amber-500 tracking-wide uppercase pt-1">// MAX LEVEL CHAMPION //</div>
+                      <div className="text-[8px] text-amber-500 tracking-wide pt-1">🏆 최고 레벨 달성!</div>
                     )}
                   </div>
                 );
@@ -781,8 +798,8 @@ export default function StudentLobby({
             <div className="flex-1">
               {activeSidebarTab === 'ranking' ? (
                 <div className="glass-panel p-4 border-cyan-500/10 space-y-3 min-h-[220px]">
-                  <div className="text-[10px] font-mono text-gray-400 uppercase tracking-widest text-center border-b border-gray-900 pb-2 mb-2">
-                    // CLASSMATES CP RANKINGS (TOP 5)
+                  <div className="text-[11px] font-bold text-gray-400 text-center border-b border-gray-900 pb-2 mb-2">
+                    🏅 실시간 CP 랭킹 (TOP 5)
                   </div>
                   <div className="space-y-2">
                     {[...localStudents].map(student => {
@@ -827,8 +844,8 @@ export default function StudentLobby({
                 </div>
               ) : (
                 <div className="glass-panel p-4 border-cyan-500/10 space-y-3 max-h-[300px] overflow-y-auto min-h-[220px]">
-                  <div className="text-[10px] font-mono text-gray-400 uppercase tracking-widest text-center border-b border-gray-900 pb-2 mb-2">
-                    // STUDENT QUEST & REWARDS
+                  <div className="text-[11px] font-bold text-gray-400 text-center border-b border-gray-900 pb-2 mb-2">
+                    📋 내 퀘스트 &amp; 보상
                   </div>
                   {/* Render Quests */}
                   {(() => {
