@@ -177,20 +177,24 @@ interface QuizScreenProps {
   unitId: number;
   onQuizComplete: (score: number, newlyUnlockedCardIds: string[]) => void;
   onCancel: () => void;
+  questionIds?: string[]; // review mode: only quiz these specific question IDs
 }
 
-export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScreenProps) {
-  const { 
-    progress, 
-    studentName, 
-    getLocalPlayer, 
+export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionIds }: QuizScreenProps) {
+  const isReviewMode = !!(questionIds && questionIds.length > 0);
+
+  const {
+    progress,
+    studentName,
+    getLocalPlayer,
     setLocalPlayer,
     classroomSession,
     setClassroomSession,
     unlockCard,
     useItem,
     gainCardXp,
-    addWrongAnswer
+    addWrongAnswer,
+    removeWrongAnswer,
   } = useGameState();
 
   const [player, setPlayer] = useState<Player | null>(null);
@@ -276,8 +280,14 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     setPlayer(localPlayer);
 
     const unitQuestions = getUnitQuestions(unitId);
-    // Shuffle and pick 10
-    const shuffled = [...unitQuestions].sort(() => Math.random() - 0.5).slice(0, 10);
+    let shuffled: Question[];
+    if (isReviewMode && questionIds) {
+      // Review mode: load only the wrong-answer questions for this unit
+      const reviewSet = new Set(questionIds);
+      shuffled = unitQuestions.filter(q => reviewSet.has(q.id));
+    } else {
+      shuffled = [...unitQuestions].sort(() => Math.random() - 0.5).slice(0, 10);
+    }
     setQuestionsList(shuffled);
   }, [unitId]);
 
@@ -388,6 +398,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
         setStreak(prev => prev + 1);
         setFlashType('correct');
         gameAudio.playCorrect();
+        if (isReviewMode) removeWrongAnswer(currentQuestion.id);
 
         // ── AWARD XP ON CORRECT ANSWER ──
         // 1. All unlocked cards of this unitId get 30 XP
@@ -464,6 +475,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     if (isCorrect) {
       setScore(prev => prev + 1); setStreak(prev => prev + 1);
       setFlashType('correct'); gameAudio.playCorrect();
+      if (isReviewMode) removeWrongAnswer(q.id);
       if (q.cardReward) { unlockCard(q.cardReward); setNewlyUnlockedCardIds(prev => [...prev, q.cardReward!]); }
     } else {
       setStreak(0); setFlashType('wrong'); gameAudio.playWrong(); addWrongAnswer(q.id);
@@ -482,7 +494,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
     setIsReadyToAdvance(false);
     setShowHint(false);
     setExplanationVisible(false);
-    if (currentIndex < 9) {
+    if (currentIndex < questionsList.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedOption(null);
       setIsAnswered(false);
@@ -646,7 +658,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
             </h2>
 
             <p className="text-gray-300 text-base leading-relaxed mb-6 font-medium">
-              현재 {currentIndex + 1}/10 문제 완료 · {score}문제 정답
+              현재 {currentIndex + 1}/{questionsList.length} 문제 완료 · {score}문제 정답
             </p>
 
             <div className="flex gap-4">
@@ -874,6 +886,12 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
               ← QUIT
             </button>
 
+            {isReviewMode && (
+              <span className="px-2.5 py-1 bg-orange-950/40 border border-orange-500/40 text-orange-400 text-[10px] font-black rounded-full tracking-wide">
+                🔁 오답 복습
+              </span>
+            )}
+
             {streak > 0 && (
               <div className="flex items-center gap-1.5 bg-orange-950/20 border border-orange-500/30 px-3 py-1 rounded-full animate-pulse">
                 <Flame className="w-4 h-4 text-orange-500 fill-current animate-bounce" />
@@ -883,7 +901,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
 
             <div className="text-right">
               <span className="text-[10px] text-gray-500 font-mono block">PROGRESS</span>
-              <span className="text-sm font-extrabold text-cyan-400 font-mono">{currentIndex + 1} / 10</span>
+              <span className="text-sm font-extrabold text-cyan-400 font-mono">{currentIndex + 1} / {questionsList.length}</span>
             </div>
           </div>
 
@@ -1067,7 +1085,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel }: QuizScr
             </div>
             <div className="border-t border-gray-900 mt-4 pt-3 flex justify-between text-xs text-gray-400">
               <span>맞힌 문제 수:</span>
-              <span className="text-white font-bold">{score} / 10</span>
+              <span className="text-white font-bold">{score} / {questionsList.length}</span>
             </div>
           </div>
 

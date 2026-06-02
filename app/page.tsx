@@ -80,6 +80,7 @@ export default function Home() {
 
   // Quiz remount key — increment to force QuizScreen to reset internal state
   const [quizKey, setQuizKey] = useState<number>(0);
+  const [reviewQuestionIds, setReviewQuestionIds] = useState<string[]>([]);
 
   // Legendary announcement state
   const [legendaryAnnounce, setLegendaryAnnounce] = useState<{
@@ -355,12 +356,15 @@ export default function Home() {
               <QuizScreen
                 key={`quiz-${selectedUnitId}-${quizKey}`}
                 unitId={selectedUnitId}
+                questionIds={reviewQuestionIds.length > 0 ? reviewQuestionIds : undefined}
                 onQuizComplete={(score, unlockedCards) => {
+                  setReviewQuestionIds([]);
                   setQuizScore(score);
                   setNewlyUnlockedCards(unlockedCards);
                   setActiveScreen('complete');
                 }}
                 onCancel={() => {
+                  setReviewQuestionIds([]);
                   setActiveScreen('lobby');
                 }}
               />
@@ -371,7 +375,13 @@ export default function Home() {
                 unitId={selectedUnitId}
                 score={quizScore}
                 newlyUnlockedCardIds={newlyUnlockedCards}
+                onReviewWrongAnswers={(ids) => {
+                  setReviewQuestionIds(ids);
+                  setQuizKey(prev => prev + 1);
+                  setActiveScreen('quiz');
+                }}
                 onRestart={() => {
+                  setReviewQuestionIds([]);
                   setQuizKey(prev => prev + 1);
                   setActiveScreen('quiz');
                 }}

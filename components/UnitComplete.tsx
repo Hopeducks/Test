@@ -3,19 +3,21 @@
 import React, { useEffect, useState } from 'react';
 import { useGameState } from '../lib/game-state';
 import { cards } from '../data/cards';
+import { getUnitQuestions } from '../data/questions';
 import { UNITS } from './PokedexHome';
 import { gameAudio } from '../lib/audio';
 import CardUnlockAnim from './CardUnlockAnim';
-import { Award, RefreshCw, Home, Share2, Sparkles, CheckCircle, Zap, MapPin } from 'lucide-react';
+import { Award, RefreshCw, Share2, Sparkles, CheckCircle, MapPin, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase-client';
 
 interface UnitCompleteProps {
   unitId: number;
-  score: number; // Correct answers out of 10
+  score: number;
   newlyUnlockedCardIds: string[];
   onRestart: () => void;
   onGoHome: () => void;
   onGoLobby?: () => void;
+  onReviewWrongAnswers?: (questionIds: string[]) => void;
 }
 
 export default function UnitComplete({
@@ -25,8 +27,13 @@ export default function UnitComplete({
   onRestart,
   onGoHome,
   onGoLobby,
+  onReviewWrongAnswers,
 }: UnitCompleteProps) {
   const { progress, unlockCard, completeUnit, studentName, studentAvatar } = useGameState();
+
+  // Compute wrong answers specific to this unit
+  const unitQuestionIds = new Set(getUnitQuestions(unitId).map(q => q.id));
+  const unitWrongAnswerIds = (progress.wrongAnswers ?? []).filter(id => unitQuestionIds.has(id));
   const { unlockedCardIds, unitHighScores } = progress;
 
   const [showLegendaryUnlock, setShowLegendaryUnlock] = useState(false);
@@ -239,6 +246,23 @@ export default function UnitComplete({
             )}
           </div>
         </div>
+
+        {/* Wrong Answer Review Banner */}
+        {unitWrongAnswerIds.length > 0 && onReviewWrongAnswers && (
+          <div className="mb-6 p-4 bg-orange-950/30 border border-orange-500/30 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 max-w-xl mx-auto">
+            <div className="text-left">
+              <p className="text-orange-300 font-black text-sm">📝 이 단원 오답이 {unitWrongAnswerIds.length}문제 있어요</p>
+              <p className="text-gray-400 text-xs mt-0.5">오답 복습으로 완전히 이해하고 넘어가세요!</p>
+            </div>
+            <button
+              onClick={() => { gameAudio.playClick(); onReviewWrongAnswers(unitWrongAnswerIds); }}
+              className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-lg transition-all touch-target text-sm"
+            >
+              <BookOpen className="w-4 h-4" />
+              오답 복습하기
+            </button>
+          </div>
+        )}
 
         {/* Action Controls */}
         <div className="flex flex-col sm:flex-row gap-6 items-center justify-center max-w-md mx-auto">
