@@ -6,7 +6,7 @@ import { ClassroomSession, StudentResponse, DashboardEvent, PlayerDashboardEntry
 import { getUnitTitle, SIMULATED_CLASSMATES } from '../../../data/questions';
 import { Users, Moon, Sun, Trophy } from 'lucide-react';
 import { supabase, IS_OFFLINE_MODE } from '../../../lib/supabase/client';
-import { RenderAvatarPreview } from '../../AvatarCustomizer';
+import { RenderAvatarPreview } from '../AvatarPreview';
 import StudentGrid from './StudentGrid';
 import ActivityFeed from './ActivityFeed';
 import ControlPanels from './ControlPanels';

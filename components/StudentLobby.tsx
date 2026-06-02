@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { gameAudio } from '../lib/audio';
 import { ClassroomSession, Player, EmoteId } from '../types';
 import { User, Users, Loader2, ArrowLeft, Shirt, Swords, BookOpen, Orbit, Trophy, ShoppingBag, Coins, Sparkles, Award } from 'lucide-react';
-import { RenderAvatarPreview } from './AvatarCustomizer';
+import { RenderAvatarPreview } from './ui/AvatarPreview';
 import { 
   getUnitTitle, 
   getUnitIcon,

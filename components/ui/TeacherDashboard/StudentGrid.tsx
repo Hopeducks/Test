@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { ClassroomSession, PlayerDashboardEntry, Player, PlayerPosition } from '../../../types';
-import { RenderAvatarPreview } from '../../AvatarCustomizer';
+import { RenderAvatarPreview } from '../AvatarPreview';
 
 interface StudentGridProps {
   classroomSession: ClassroomSession;

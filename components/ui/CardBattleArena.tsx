@@ -6,7 +6,7 @@ import { cards } from '../../data/cards';
 import { questions, getUnitQuestions, getUnitTitle } from '../../data/questions';
 import { costumeCatalog } from '../../data/costume-catalog';
 import { gameAudio } from '../../lib/audio';
-import { RenderAvatarPreview } from '../AvatarCustomizer';
+import { RenderAvatarPreview } from './AvatarPreview';
 import { supabase } from '../../lib/supabase-client';
 
 const IS_SUPABASE_CONFIGURED = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
