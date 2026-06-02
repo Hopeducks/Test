@@ -139,9 +139,9 @@
 | 3 | 평가 다양화 | OX·매칭·단답 문제 타입 + 루브릭 UI | complete | with 4 | 2 | `.claude/PRPs/plans/completed/phase-3-assessment-variety.plan.md` |
 | 4 | 맵 유니버스 | 8개 단원 테마 존, NPC 퀘스트, 탐험 동선 | complete | with 3 | 2 | `.claude/PRPs/plans/completed/phase-4-map-universe.plan.md` |
 | 5 | 게임 모드 | 토너먼트, 타임어택, 협동 레이드 스케일링 | complete | - | 3, 4 | `.claude/PRPs/plans/completed/phase-5-game-modes.plan.md` |
-| 6 | 콘텐츠 품질 | 카드 아트, 문제 품질 검수, 루브릭 데이터 완성 | in-progress | with 5 | 3 | `.claude/PRPs/plans/phase-6-content-quality.plan.md` |
-| 7 | 교사 도구 | 대시보드 개선, CSV 내보내기, 루브릭 뷰 | pending | - | 5, 6 | - |
-| 8 | 안정화 | 부하 테스트, 오프라인 폴백, 최종 QA | pending | - | 7 | - |
+| 6 | 콘텐츠 품질 | 카드 아트, 문제 품질 검수, 루브릭 데이터 완성 | complete | with 5 | 3 | `.claude/PRPs/plans/completed/phase-6-content-quality.plan.md` |
+| 7 | 교사 도구 | 대시보드 개선, CSV 내보내기, 답변 분포 차트 | complete | - | 5, 6 | `.claude/PRPs/plans/phase-7-teacher-tools.plan.md` |
+| 8 | 안정화 | 오프라인 폴백 배지, 60명 AI 시뮬레이션, 자동 응답 | complete | - | 7 | `.claude/PRPs/plans/phase-8-stabilization.plan.md` |
 
 ### Phase Details
 

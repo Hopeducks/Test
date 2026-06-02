@@ -92,28 +92,40 @@ export default function StatsPanel({
             단원별 완료 상태 히트맵 (Completion Heatmap)
           </h3>
           <div className="space-y-3 overflow-y-auto max-h-[350px] pr-1">
-            {classroomSession.students.map(student => (
-              <div key={student.name} className="flex items-center justify-between text-xs border-b border-gray-900 pb-2">
-                <span className="font-bold w-24 truncate">{student.avatar} {student.name}</span>
-                <div className="flex-1 flex gap-1 justify-end">
-                  {Array.from({ length: 8 }).map((_, i) => {
-                    const unitId = i + 1;
-                    const isDone = student.currentScore > unitId;
-                    return (
-                      <span
-                        key={unitId}
-                        className={`w-6 h-6 border rounded text-[9px] font-mono font-bold flex items-center justify-center ${
-                          isDone ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-gray-950 border-gray-900 text-gray-700'
-                        }`}
-                        title={`${unitId}단원 완료`}
-                      >
-                        {unitId}
-                      </span>
-                    );
-                  })}
+            {classroomSession.students.map(student => {
+              const totalAttempted = classroomSession.currentQuestionIndex +
+                (student.answeredCurrentQuestion ? 1 : 0);
+              const accuracy = totalAttempted > 0
+                ? Math.round((student.currentScore / totalAttempted) * 100)
+                : 0;
+              return (
+                <div key={student.name} className="space-y-1 border-b border-gray-900 pb-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold w-24 truncate">{student.avatar} {student.name}</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {student.currentScore}점 ({accuracy}%)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 h-1.5 bg-gray-950 border border-gray-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-400 transition-all duration-500"
+                        style={{ width: `${accuracy}%` }}
+                      />
+                    </div>
+                    <span className={`text-[9px] font-mono ${
+                      student.answeredCurrentQuestion
+                        ? student.lastAnswerCorrect ? 'text-emerald-500' : 'text-red-500'
+                        : 'text-gray-700'
+                    }`}>
+                      {student.answeredCurrentQuestion
+                        ? student.lastAnswerCorrect ? '✓' : '✗'
+                        : '…'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -124,20 +136,43 @@ export default function StatsPanel({
               단원별 전체 평균 정답률
             </h3>
             <div className="space-y-3">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(unitId => {
-                const avgAccuracy = Math.max(10, Math.round(92 - unitId * 8 + Math.random() * 5));
-                return (
-                  <div key={unitId} className="space-y-1">
-                    <div className="flex justify-between items-baseline text-xs font-mono">
-                      <span>{unitId}단원. {getUnitTitle(unitId)}</span>
-                      <span className="text-cyan-400 font-bold">{avgAccuracy}%</span>
+              {(() => {
+                const { students, activeUnitId, currentQuestionIndex } = classroomSession;
+                const totalAttempted = currentQuestionIndex +
+                  (students.some(s => s.answeredCurrentQuestion) ? 1 : 0);
+                const avgScore = students.length > 0
+                  ? students.reduce((acc, s) => acc + s.currentScore, 0) / students.length
+                  : 0;
+                const sessionAccuracy = totalAttempted > 0
+                  ? Math.round((avgScore / totalAttempted) * 100)
+                  : 0;
+                return [1, 2, 3, 4, 5, 6, 7, 8].map(unitId => {
+                  const isActive = unitId === activeUnitId;
+                  const accuracy = isActive ? sessionAccuracy : 0;
+                  return (
+                    <div key={unitId} className="space-y-1">
+                      <div className="flex justify-between items-baseline text-xs font-mono">
+                        <span className={isActive ? 'text-gray-200' : 'text-gray-700'}>
+                          {unitId}단원. {getUnitTitle(unitId)}
+                        </span>
+                        <span className={`font-bold ${isActive ? 'text-cyan-400' : 'text-gray-700'}`}>
+                          {isActive ? `${accuracy}%` : '—'}
+                        </span>
+                      </div>
+                      <div className={`w-full h-2.5 rounded-full overflow-hidden border ${
+                        isActive ? 'bg-gray-950 border-gray-800' : 'bg-gray-950/50 border-gray-900'
+                      }`}>
+                        <div
+                          className={`h-full transition-all duration-700 ${
+                            isActive ? 'bg-cyan-400' : 'bg-gray-800'
+                          }`}
+                          style={{ width: `${isActive ? accuracy : 0}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-2.5 bg-gray-950 border border-gray-900 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-400" style={{ width: `${avgAccuracy}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
 

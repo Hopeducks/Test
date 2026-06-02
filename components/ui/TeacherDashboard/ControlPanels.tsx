@@ -5,10 +5,26 @@ import { Button } from '../design-system';
 import { gameAudio } from '../../../lib/audio';
 import { ClassroomSession, DashboardEvent, TournamentMatch, TournamentBracket } from '../../../types';
 import TournamentBracketView from '../TournamentBracketView';
+import AnswerDistributionPanel from './AnswerDistributionPanel';
 import { getUnitTitle } from '../../../data/questions';
 import { questions } from '../../../data/questions';
 import { cards } from '../../../data/cards';
 import { supabase } from '../../../lib/supabase-client';
+
+// AI 봇 스폰용 이름·아바타 풀 (60명 지원)
+const BOT_NAMES = [
+  '김지우','이민준','박서아','최하준','정서윤','강도윤','조아윤','윤하은','장시우','한지아',
+  '임주원','오예준','서유나','신건우','권다은','배민서','황지호','안수연','류하은','고준서',
+  '문지원','차예린','유정원','나도현','엄하늘','성민재','홍수아','전준혁','남지윤','심이준',
+  '곽도원','변서윤','노하린','탁민준','위지유','편수민','채하윤','진서우','국민서','봉지아',
+  '경하준','선예빈','태수아','사이준','아지민','파도윤','마하은','라준서','다이서','가민준',
+  '나예슬','다하늘','라민재','마서준','바지아','사예준','아민서','자이준','차하은','타준혁',
+];
+const BOT_AVATARS = [
+  '⚡','🔥','🌱','💧','🦖','⭐','🛸','🔬','🌋','🧬',
+  '🎯','🚀','🌈','🔭','🧩','🎮','🦋','🐉','🌊','🧊',
+  '🎸','🏆','🎭','🌟','🦄','🐬','🦊','🐼','🦁','🐯',
+];
 
 interface ControlPanelsProps {
   classroomSession: ClassroomSession;
@@ -147,6 +163,34 @@ export default function ControlPanels({
   const handleToggleBattleMode = () => {
     gameAudio.playClick();
     setClassroomSession({ ...classroomSession, battleMode: !classroomSession.battleMode });
+  };
+
+  const handleSpawnAIStudents = (count: number) => {
+    gameAudio.playClick();
+    const existingNames = new Set(classroomSession.students.map(s => s.name));
+    const newStudents: ClassroomSession['students'] = [];
+    for (let i = 0; i < BOT_NAMES.length && newStudents.length < count; i++) {
+      const name = BOT_NAMES[i];
+      if (existingNames.has(name)) continue;
+      newStudents.push({
+        name,
+        avatar: BOT_AVATARS[i % BOT_AVATARS.length],
+        isSimulated: true,
+        currentScore: 0,
+        currentStreak: 0,
+        answeredCurrentQuestion: false,
+        x: 10 + Math.floor(i / 8) * 7,
+        y: 10 + (i % 8) * 4,
+        equippedCosmetics: { outfit: 'none', expression: 'none', accessory: 'none', mount: 'none' },
+      });
+    }
+    if (newStudents.length === 0) return;
+    setClassroomSession({ ...classroomSession, students: [...classroomSession.students, ...newStudents] });
+  };
+
+  const handleClearAIStudents = () => {
+    gameAudio.playClick();
+    setClassroomSession({ ...classroomSession, students: classroomSession.students.filter(s => !s.isSimulated) });
   };
 
   const handleDragStart = (e: React.DragEvent, name: string) => {
@@ -293,6 +337,36 @@ export default function ControlPanels({
         </div>
       </div>
 
+      {/* AI Student Spawn */}
+      <div className="glass-panel p-5 border-green-500/10 space-y-4">
+        <h3 className="text-xs font-mono font-black text-green-400 uppercase tracking-widest border-b border-gray-900 pb-2 flex items-center justify-between">
+          <span>// AI CLASSROOM SIMULATOR</span>
+          <span className="text-gray-600 font-normal">{classroomSession.students.filter(s => s.isSimulated).length}명 봇</span>
+        </h3>
+        <div className="space-y-2">
+          <div className="text-[10px] font-mono text-gray-500">AI 학생 스폰 (실제 학생 없이 데모 가능)</div>
+          <div className="grid grid-cols-3 gap-2">
+            {([15, 30, 60] as const).map(count => (
+              <button
+                key={count}
+                onClick={() => handleSpawnAIStudents(count)}
+                className="py-2 bg-green-950/30 border border-green-500/30 hover:bg-green-950/50 text-green-300 text-xs font-bold rounded-lg transition-all"
+              >
+                +{count}명
+              </button>
+            ))}
+          </div>
+          {classroomSession.students.some(s => s.isSimulated) && (
+            <button
+              onClick={handleClearAIStudents}
+              className="w-full py-1.5 bg-gray-950 border border-gray-800 hover:border-red-500/40 text-gray-500 hover:text-red-400 text-[10px] font-mono rounded-lg transition-all"
+            >
+              AI 봇 전체 제거
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Battle Matchmaking */}
       <div className="glass-panel p-5 border-red-500/10 space-y-4">
         <h3 className="text-xs font-mono font-black text-red-400 uppercase tracking-widest border-b border-gray-900 pb-2">
@@ -424,6 +498,11 @@ export default function ControlPanels({
           )}
         </div>
       </div>
+
+      {/* Live Answer Distribution — 퀴즈 진행 중에만 표시 */}
+      {classroomSession.status === 'playing' && (
+        <AnswerDistributionPanel classroomSession={classroomSession} />
+      )}
 
       {/* Notice Board */}
       <div className="glass-panel p-5 border-cyan-500/10 space-y-4">

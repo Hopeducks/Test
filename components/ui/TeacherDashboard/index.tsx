@@ -5,7 +5,7 @@ import { gameAudio } from '../../../lib/audio';
 import { ClassroomSession, StudentResponse, DashboardEvent, PlayerDashboardEntry } from '../../../types';
 import { getUnitTitle, SIMULATED_CLASSMATES } from '../../../data/questions';
 import { Users, Moon, Sun, Trophy } from 'lucide-react';
-import { supabase } from '../../../lib/supabase-client';
+import { supabase, IS_OFFLINE_MODE } from '../../../lib/supabase/client';
 import { RenderAvatarPreview } from '../../AvatarCustomizer';
 import StudentGrid from './StudentGrid';
 import ActivityFeed from './ActivityFeed';
@@ -188,6 +188,36 @@ export default function TeacherDashboard({
     return () => clearInterval(intervalId);
   }, [sessionCode]);
 
+  // AI 봇 자동 응답 시뮬레이션 — 퀴즈 진행 중 800ms마다 일부 봇이 답변
+  useEffect(() => {
+    if (classroomSession?.status !== 'playing') return;
+    if (!classroomSession.students.some(s => s.isSimulated && !s.answeredCurrentQuestion)) return;
+
+    const timer = setInterval(() => {
+      const current = sessionRef.current;
+      if (!current || current.status !== 'playing') return;
+      const hasPending = current.students.some(s => s.isSimulated && !s.answeredCurrentQuestion);
+      if (!hasPending) { clearInterval(timer); return; }
+
+      const updated = current.students.map(s => {
+        if (!s.isSimulated || s.answeredCurrentQuestion) return s;
+        if (Math.random() > 0.45) return s; // ~55% 확률로 이번 틱에 응답
+        const correct = Math.random() < 0.75;
+        return {
+          ...s,
+          answeredCurrentQuestion: true,
+          lastAnswerCorrect: correct,
+          currentScore: s.currentScore + (correct ? 1 : 0),
+          currentStreak: correct ? s.currentStreak + 1 : 0,
+        };
+      });
+      setClassroomSession({ ...current, students: updated });
+    }, 800);
+
+    return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classroomSession?.status, classroomSession?.currentQuestionIndex]);
+
   const handleStartLobby = () => {
     gameAudio.playClick();
     setClassroomSession({
@@ -230,8 +260,17 @@ export default function TeacherDashboard({
   const handleExportCSV = () => {
     gameAudio.playClick();
     if (!classroomSession || classroomSession.students.length === 0) return;
-    let csv = '﻿학습원 닉네임,정답 점수,최근 콤보 횟수,접속 위치(X),접속 위치(Y)\n';
-    classroomSession.students.forEach(s => { csv += `"${s.name}","${s.currentScore}","${s.currentStreak}","${s.x}","${s.y}"\n`; });
+    const totalAttempted = classroomSession.currentQuestionIndex +
+      (classroomSession.students.some(s => s.answeredCurrentQuestion) ? 1 : 0);
+    const unitId = classroomSession.activeUnitId;
+    const header = '﻿학습원 닉네임,아바타,단원 ID,단원명,정답 점수,정답률(%),최근 콤보 횟수,시뮬레이션 여부\n';
+    const rows = classroomSession.students.map(s => {
+      const accuracy = totalAttempted > 0
+        ? Math.round((s.currentScore / totalAttempted) * 100)
+        : 0;
+      return `"${s.name}","${s.avatar}","${unitId}","${getUnitTitle(unitId)}","${s.currentScore}","${accuracy}","${s.currentStreak}","${s.isSimulated ? 'Y' : 'N'}"`;
+    });
+    const csv = header + rows.join('\n') + '\n';
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -244,8 +283,16 @@ export default function TeacherDashboard({
   const handleCopyTSV = () => {
     gameAudio.playClick();
     if (!classroomSession || classroomSession.students.length === 0) return;
-    let tsv = '학습원 닉네임\t정답 점수\t최근 콤보 횟수\n';
-    classroomSession.students.forEach(s => { tsv += `${s.name}\t${s.currentScore}\t${s.currentStreak}\n`; });
+    const totalAttempted = classroomSession.currentQuestionIndex +
+      (classroomSession.students.some(s => s.answeredCurrentQuestion) ? 1 : 0);
+    const unitId = classroomSession.activeUnitId;
+    let tsv = `학습원 닉네임\t단원\t정답 점수\t정답률(%)\t최근 콤보 횟수\n`;
+    classroomSession.students.forEach(s => {
+      const accuracy = totalAttempted > 0
+        ? Math.round((s.currentScore / totalAttempted) * 100)
+        : 0;
+      tsv += `${s.name}\t${unitId}단원\t${s.currentScore}\t${accuracy}\t${s.currentStreak}\n`;
+    });
     navigator.clipboard.writeText(tsv).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
@@ -272,6 +319,11 @@ export default function TeacherDashboard({
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {IS_OFFLINE_MODE && (
+            <span className="px-2.5 py-1.5 bg-amber-950/50 border border-amber-500/40 text-amber-400 text-[10px] font-mono font-bold rounded-lg">
+              🔌 OFFLINE MODE
+            </span>
+          )}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-950 border border-gray-850 rounded-lg text-xs font-mono">
             <Users className="w-4 h-4 text-cyan-400" />
             <span>접속 대원: {classroomSession?.students.length || 0}명</span>
