@@ -37,3 +37,7 @@ tsconfig.tsbuildinfo
 .vercel/
 supabase/.temp/
 supabase/config.toml.local
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
