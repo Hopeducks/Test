@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { questions } from '../data/questions';
 import { cards } from '../data/cards';
+import { isMCQuestion } from '../types';
+
+// 메인 320문항은 모두 객관식(MC) — correctIndex/options 접근 전 타입 가드로 좁힌다
+const mcQuestions = questions.filter(isMCQuestion);
 
 describe('문항 데이터 무결성', () => {
   it('전체 문항 수는 320개', () => {
@@ -14,14 +18,18 @@ describe('문항 데이터 무결성', () => {
     }
   });
 
+  it('320문항 전체가 객관식(MC) 형식', () => {
+    expect(mcQuestions).toHaveLength(320);
+  });
+
   it('correctIndex는 0~3 사이 정수', () => {
-    for (const q of questions) {
+    for (const q of mcQuestions) {
       expect([0, 1, 2, 3]).toContain(q.correctIndex);
     }
   });
 
   it('모든 문항에 4개의 선택지 존재', () => {
-    for (const q of questions) {
+    for (const q of mcQuestions) {
       expect(q.options).toHaveLength(4);
       for (const opt of q.options) {
         expect(opt).toBeTruthy();

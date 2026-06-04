@@ -1,177 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, Question, CostumeId, MCQuestion, OXQuestion, isMCQuestion, isOXQuestion, isMatchingQuestion, isShortQuestion } from '../../types';
+import { Player, Question, MCQuestion, OXQuestion, isMCQuestion, isOXQuestion, isMatchingQuestion, isShortQuestion } from '../../types';
 import { OXRenderer, MatchingRenderer, ShortAnswerRenderer } from './quiz';
+import { getUnitTheme } from './quiz/unit-theme';
+import CaptureMinigame, { ConsumableBall } from './quiz/CaptureMinigame';
+import QuizQuitModal from './quiz/QuizQuitModal';
 import { useGameState } from '../../lib/game-state';
 import { supabase } from '../../lib/supabase-client';
 import { submitQuizAnswer } from '../../lib/supabase/edge-functions';
 import { gameAudio } from '../../lib/audio';
 import { cards } from '../../data/cards';
 import { getUnitQuestions } from '../../data/questions';
-import { Sparkles, Timer, Flame, CheckCircle, AlertTriangle, HelpCircle, Loader2 } from 'lucide-react';
-
-interface UnitTheme {
-  name: string;
-  bgGradient: string;
-  cardBg: string;
-  accentGlow: string;
-  textColor: string;
-  btnStyle: string;
-  btnCorrect: string;
-  btnIncorrect: string;
-  overlayHtml?: React.ReactNode;
-}
-
-function getUnitTheme(unitId: number): UnitTheme {
-  switch (unitId) {
-    case 1:
-      return {
-        name: '지층과 화석',
-        bgGradient: 'from-stone-900 to-amber-950',
-        cardBg: 'bg-stone-950/80 border-stone-750/30',
-        accentGlow: 'shadow-[0_0_15px_rgba(120,113,108,0.15)]',
-        textColor: 'text-stone-400',
-        btnStyle: 'border-stone-500/20 hover:border-stone-450 hover:bg-stone-900/30 text-stone-200 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-stone-400 via-stone-600 to-transparent" />
-        )
-      };
-    case 2:
-      return {
-        name: '빛의 성질',
-        bgGradient: 'from-yellow-950 via-gray-950 to-amber-950',
-        cardBg: 'bg-black/80 border-yellow-500/20',
-        accentGlow: 'shadow-[0_0_20px_rgba(234,179,8,0.15)]',
-        textColor: 'text-yellow-400',
-        btnStyle: 'border-yellow-500/20 hover:border-yellow-450 hover:bg-yellow-950/20 text-yellow-100 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.05] overflow-hidden">
-            <div className="absolute top-0 left-1/4 w-[2px] h-full bg-gradient-to-b from-yellow-400 via-amber-500 to-transparent blur-[1px] animate-pulse" />
-            <div className="absolute top-0 left-3/4 w-[1px] h-full bg-gradient-to-b from-yellow-300 via-transparent to-transparent blur-[0.5px]" />
-          </div>
-        )
-      };
-    case 3:
-      return {
-        name: '용해와 용액',
-        bgGradient: 'from-blue-950 to-indigo-950',
-        cardBg: 'bg-indigo-950/50 border-blue-500/20 backdrop-blur-md',
-        accentGlow: 'shadow-[0_0_20px_rgba(59,130,246,0.15)]',
-        textColor: 'text-blue-400',
-        btnStyle: 'border-blue-500/20 hover:border-blue-400 hover:bg-blue-950/20 text-blue-100 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.08] overflow-hidden">
-            <div className="absolute bottom-4 left-4 w-2.5 h-2.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '4s' }} />
-            <div className="absolute bottom-10 left-36 w-4 h-4 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '6s' }} />
-            <div className="absolute bottom-6 left-72 w-3 h-3 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '2.5s', animationDuration: '5s' }} />
-            <div className="absolute bottom-20 right-12 w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '3s' }} />
-          </div>
-        )
-      };
-    case 4:
-      return {
-        name: '우리 몸의 구조와 기능',
-        bgGradient: 'from-purple-950 to-fuchsia-950',
-        cardBg: 'bg-purple-950/70 border-fuchsia-500/20',
-        accentGlow: 'shadow-[0_0_15px_rgba(217,70,239,0.15)]',
-        textColor: 'text-fuchsia-400',
-        btnStyle: 'border-fuchsia-500/20 hover:border-fuchsia-400 hover:bg-fuchsia-950/20 text-fuchsia-100 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden">
-            <div className="w-full h-full bg-[linear-gradient(90deg,transparent_49%,rgba(217,70,239,0.2)_50%,transparent_51%)] bg-[length:40px_40px] animate-pulse" />
-          </div>
-        )
-      };
-    case 5:
-      return {
-        name: '생물과 환경',
-        bgGradient: 'from-emerald-950 to-stone-900',
-        cardBg: 'bg-stone-950/70 border-emerald-500/20',
-        accentGlow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]',
-        textColor: 'text-emerald-400',
-        btnStyle: 'border-emerald-500/20 hover:border-emerald-400 hover:bg-emerald-950/20 text-emerald-100 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.06] overflow-hidden">
-            <span className="absolute top-10 left-12 text-base text-emerald-500 animate-pulse select-none opacity-40">🍃</span>
-            <span className="absolute bottom-20 right-16 text-sm text-emerald-400 animate-bounce select-none opacity-30">🌱</span>
-          </div>
-        )
-      };
-    case 6:
-      return {
-        name: '날씨와 우리 생활',
-        bgGradient: 'from-cyan-950 to-slate-900',
-        cardBg: 'bg-slate-950/70 border-cyan-500/20',
-        accentGlow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
-        textColor: 'text-cyan-400',
-        btnStyle: 'border-cyan-500/20 hover:border-cyan-400 hover:bg-cyan-950/20 text-cyan-100 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.05] overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.15),transparent)] animate-pulse" />
-          </div>
-        )
-      };
-    case 7:
-      return {
-        name: '물체의 운동',
-        bgGradient: 'from-slate-800 to-zinc-950',
-        cardBg: 'bg-zinc-950/80 border-slate-600/30',
-        accentGlow: 'shadow-[0_0_15px_rgba(148,163,184,0.15)]',
-        textColor: 'text-slate-400',
-        btnStyle: 'border-slate-500/20 hover:border-slate-400 hover:bg-slate-900/30 text-slate-200 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.02] overflow-hidden">
-            <div className="absolute top-1/3 left-0 w-full h-[1px] bg-white animate-pulse" />
-            <div className="absolute top-2/3 left-0 w-full h-[1px] bg-slate-400" />
-          </div>
-        )
-      };
-    case 8:
-      return {
-        name: '산과 염기',
-        bgGradient: 'from-red-950 to-purple-950',
-        cardBg: 'bg-purple-950/40 border-red-500/20 backdrop-blur-sm',
-        accentGlow: 'shadow-[0_0_20px_rgba(239,68,68,0.15)]',
-        textColor: 'text-red-400',
-        btnStyle: 'border-red-500/20 hover:border-red-400 hover:bg-red-950/20 text-red-100 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-        overlayHtml: (
-          <div className="absolute inset-0 pointer-events-none opacity-[0.06] overflow-hidden">
-            <div className="absolute bottom-4 left-12 w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-            <div className="absolute bottom-12 left-48 w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '1.2s' }} />
-            <div className="absolute bottom-8 right-24 w-4.5 h-4.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.8s' }} />
-          </div>
-        )
-      };
-    default:
-      return {
-        name: '과학 퀴즈',
-        bgGradient: 'from-[#0b0f19] to-[#04060c]',
-        cardBg: 'bg-[#090f1d]/60 border-cyan-500/10',
-        accentGlow: 'shadow-[0_0_15px_rgba(6,182,212,0.1)]',
-        textColor: 'text-cyan-400',
-        btnStyle: 'border-cyan-500/10 hover:border-cyan-400/40 bg-gray-950/30 hover:bg-cyan-950/10 text-gray-250 hover:text-white',
-        btnCorrect: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
-        btnIncorrect: 'border-red-500 bg-red-950/40 text-red-300',
-      };
-  }
-}
+import { Sparkles, Flame, CheckCircle, AlertTriangle, HelpCircle, Loader2 } from 'lucide-react';
 
 interface QuizScreenProps {
   unitId: number;
@@ -185,7 +26,6 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
   const {
     progress,
-    studentName,
     getLocalPlayer,
     setLocalPlayer,
     classroomSession,
@@ -215,10 +55,10 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
     const handleLevelUp = (e: Event) => {
       const customEvent = e as CustomEvent<{ cardId: string; name: string }>;
       const { name } = customEvent.detail;
-      
+
       setLevelUpToast(`🎉 [${name}] 레벨 업!`);
-      
-      const t = setTimeout(() => {
+
+      setTimeout(() => {
         setLevelUpToast(null);
       }, 3000);
     };
@@ -266,13 +106,8 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
   // Quit Modal State
   const [showQuitModal, setShowQuitModal] = useState(false);
 
-  // Capture Minigame States
+  // Rare Card Capture Minigame — 포획 대상 카드 ID (미니게임은 CaptureMinigame가 자체 관리)
   const [captureCardId, setCaptureCardId] = useState<string | null>(null);
-  const [greenZoneLeft, setGreenZoneLeft] = useState(100); // 0px to 680px range
-  const [captureStatus, setCaptureStatus] = useState<'aiming' | 'success' | 'fail' | null>(null);
-  const [selectedBallType, setSelectedBallType] = useState<'monsterBall' | 'superBall' | 'ultraBall' | 'masterBall'>('monsterBall');
-  const captureAnimRef = useRef<number | null>(null);
-  const captureStartTimeRef = useRef<number | null>(null);
 
   // Load local player and unit questions
   useEffect(() => {
@@ -405,7 +240,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
         const unitCardIds = cards
           .filter(c => c.unitId === unitId && progress.unlockedCardIds.includes(c.id))
           .map(c => c.id);
-        
+
         // 2. Top 3 strongest cards (representing active deck) get 15 XP
         const top3Cards = cards
           .filter(c => progress.unlockedCardIds.includes(c.id))
@@ -429,10 +264,8 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
         if (response.cardUnlocked) {
           const matchingCard = cards.find(c => c.id === response.cardUnlocked);
           if (matchingCard && matchingCard.rarity === 'rare') {
-            // Trigger Rare Card Capture Minigame
+            // Trigger Rare Card Capture Minigame (CaptureMinigame가 조준/판정 담당)
             setCaptureCardId(response.cardUnlocked);
-            setCaptureStatus('aiming');
-            captureStartTimeRef.current = null;
           } else if (response.cardUnlocked) {
             // Standard Card Unlock immediately
             unlockCard(response.cardUnlocked);
@@ -503,131 +336,34 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
     }
   };
 
-  // ── Rare Card Capture Minigame Loops ──────────────────────────────────────
-  useEffect(() => {
-    if (!captureCardId || captureStatus !== 'aiming') {
-      if (captureAnimRef.current) cancelAnimationFrame(captureAnimRef.current);
-      return;
-    }
-
-    const animateGreenZone = (timestamp: number) => {
-      if (!captureStartTimeRef.current) captureStartTimeRef.current = timestamp;
-      const elapsedSeconds = (timestamp - captureStartTimeRef.current) / 1000;
-
-      // Track dimensions: 800px wide horizontal track
-      const ballWidth = getBallWidth(selectedBallType);
-      // Max boundary for left alignment = 800 - ballWidth
-      const maxLeft = Math.max(0, 800 - ballWidth);
-      
-      // Speed: 200px/s for rare
-      const speed = 200;
-      
-      // Calculate oscillation using a sine wave with easing (starts slow at boundaries, fast in middle)
-      // Cycle width = 2 * maxLeft. Period = (2 * maxLeft) / speed
-      const period = maxLeft > 0 ? (2 * maxLeft) / speed : 1;
-      const omega = (2 * Math.PI) / period;
-      
-      // Position maps to sine oscillation
-      const leftPos = maxLeft > 0 ? (maxLeft / 2) + (maxLeft / 2) * Math.sin(omega * elapsedSeconds) : 0;
-
-      setGreenZoneLeft(leftPos);
-      captureAnimRef.current = requestAnimationFrame(animateGreenZone);
-    };
-
-    captureAnimRef.current = requestAnimationFrame(animateGreenZone);
-
-    // Keyboard Listener for Space Key
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        triggerCaptureAction();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      if (captureAnimRef.current) cancelAnimationFrame(captureAnimRef.current);
-    };
-  }, [captureCardId, captureStatus]);
-
-  const getBallWidth = (type: string) => {
-    if (type === 'superBall') return 180;
-    if (type === 'ultraBall') return 240;
-    if (type === 'masterBall') return 800;
-    return 120;
+  // ── 희귀 카드 포획 결과 처리 (CaptureMinigame 콜백) ────────────────
+  const handleCaptureSuccess = (cid: string) => {
+    unlockCard(cid);
+    setNewlyUnlockedCardIds(prev => [...prev, cid]);
   };
 
-  const getBallCatchRate = (ballType: string): number => {
-    if (ballType === 'masterBall') return 1.0;
-    if (ballType === 'ultraBall') return 0.85;
-    if (ballType === 'superBall') return 0.70;
-    return 0.50; // monsterBall
+  const handleCaptureFail = async (cid: string) => {
+    // 포획 실패 시 DB에 기록된 카드 해금을 롤백
+    if (!player) return;
+    const updatedUnlocked = player.unlockedCards.filter(id => id !== cid);
+    try {
+      await supabase
+        .from('players')
+        .update({ unlocked_cards: updatedUnlocked })
+        .eq('id', player.id);
+
+      setLocalPlayer({ ...player, unlockedCards: updatedUnlocked });
+    } catch (e) {
+      console.error('Failed to rollback failed capture card unlock:', e);
+    }
   };
 
-  const triggerCaptureAction = async () => {
-    if (captureStatus !== 'aiming' || !captureCardId) return;
-
-    if (captureAnimRef.current) cancelAnimationFrame(captureAnimRef.current);
-
-    // Capture point/marker is in the center of the track (400px)
-    const targetPoint = 400;
-    const ballWidth = getBallWidth(selectedBallType);
-
-    // 위치 판정: 400px가 CATCH ZONE 안에 있는지
-    const inZone = targetPoint >= greenZoneLeft && targetPoint <= (greenZoneLeft + ballWidth);
-    // 확률 판정: 볼 종류별 성공 확률 추가 적용
-    const catchRate = getBallCatchRate(selectedBallType);
-    const isSuccess = inZone && Math.random() < catchRate;
-
-    if (isSuccess) {
-      gameAudio.playCatchSuccess();
-      setCaptureStatus('success');
-      unlockCard(captureCardId);
-      setNewlyUnlockedCardIds(prev => [...prev, captureCardId]);
-      
-      // Consume ball item
-      if (selectedBallType !== 'monsterBall') {
-        useItem(selectedBallType);
-        const remaining = (progress.items?.[selectedBallType] || 1) - 1;
-        if (remaining <= 0) {
-          setSelectedBallType('monsterBall');
-        }
-      }
-    } else {
-      gameAudio.playWrong();
-      setCaptureStatus('fail');
-      
-      // Consume ball item
-      if (selectedBallType !== 'monsterBall') {
-        useItem(selectedBallType);
-        const remaining = (progress.items?.[selectedBallType] || 1) - 1;
-        if (remaining <= 0) {
-          setSelectedBallType('monsterBall');
-        }
-      }
-      
-      // Rollback card unlock in database if capture fails
-      if (player) {
-        const updatedUnlocked = player.unlockedCards.filter(id => id !== captureCardId);
-        try {
-          await supabase
-            .from('players')
-            .update({ unlocked_cards: updatedUnlocked })
-            .eq('id', player.id);
-          
-          const updatedPlayer = { ...player, unlockedCards: updatedUnlocked };
-          setLocalPlayer(updatedPlayer);
-        } catch (e) {
-          console.error('Failed to rollback failed capture card unlock:', e);
-        }
-      }
-    }
+  const handleCaptureConsumeBall = (ballType: ConsumableBall) => {
+    useItem(ballType);
   };
 
   const handleCaptureContinue = () => {
     setCaptureCardId(null);
-    setCaptureStatus(null);
     handleNext();
   };
 
@@ -650,44 +386,21 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
       {/* Quit Confirmation Modal */}
       {showQuitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-md p-6 border-red-500/30 bg-gradient-to-b from-[#180a0a] to-[#0a0505] shadow-2xl relative">
-            <h2 className="text-2xl font-black text-red-400 flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
-              퀴즈를 중단하시겠습니까?
-            </h2>
-
-            <p className="text-gray-300 text-base leading-relaxed mb-6 font-medium">
-              현재 {currentIndex + 1}/{questionsList.length} 문제 완료 · {score}문제 정답
-            </p>
-
-            <div className="flex gap-4">
-              <button
-                onClick={() => {
-                  gameAudio.playClick();
-                  setShowQuitModal(false);
-                  resumeTimer();
-                }}
-                className="flex-1 py-3 bg-gray-900 border border-gray-800 text-gray-300 hover:text-white font-bold rounded-lg transition-all touch-target"
-              >
-                계속 풀기
-              </button>
-
-              <button
-                onClick={() => {
-                  gameAudio.playClick();
-                  setShowQuitModal(false);
-                  onCancel();
-                }}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-lg transition-all hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] touch-target"
-              >
-                퀴즈 중단하기
-              </button>
-            </div>
-          </div>
-        </div>
+        <QuizQuitModal
+          currentNumber={currentIndex + 1}
+          total={questionsList.length}
+          score={score}
+          onResume={() => {
+            setShowQuitModal(false);
+            resumeTimer();
+          }}
+          onQuit={() => {
+            setShowQuitModal(false);
+            onCancel();
+          }}
+        />
       )}
-      
+
       {/* XP Toast Layer */}
       <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none flex flex-col gap-2">
         {xpToasts.map(toast => (
@@ -706,173 +419,22 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
       {/* Rare Card Capture Challenge Full-Screen Overlay */}
       {captureCardId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
-          <div className="w-full max-w-5xl bg-gradient-to-b from-[#18110a] to-[#050302] border border-amber-500/30 rounded-3xl p-8 text-center relative shadow-2xl overflow-hidden flex flex-col items-center">
-            
-            {/* Ambient Background Glow */}
-            <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.06)_0%,transparent_60%)] pointer-events-none" />
-
-            <h2 className="text-3xl md:text-4xl font-black text-amber-400 mb-2 tracking-wide font-sans animate-pulse filter drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">
-              ✨ 희귀 카드 포획 찬스! ✨
-            </h2>
-            <p className="text-[10px] font-mono text-amber-500/60 uppercase tracking-widest mb-10">
-              // CHANCE TO CAPTURE RARE SCIENCE CARD // PRESS SPACE OR TAP TO CATCH
-            </p>
-
-            {/* 3D Card Display Area */}
-            <div className="w-56 h-72 relative perspective-1000 mb-10 select-none">
-              <div className={`w-full h-full relative duration-700 preserve-3d transition-transform ${
-                captureStatus === 'success' ? 'rotate-y-180' : ''
-              }`}>
-                {/* Card Front (Silhouette or Hidden Card before catch) */}
-                <div className="absolute inset-0 backface-hidden bg-gray-900/60 border-2 border-dashed border-amber-500/20 rounded-2xl flex flex-col items-center justify-center p-4">
-                  <div className={`text-7xl mb-4 opacity-35 ${
-                    captureStatus === 'fail' ? 'scale-90 rotate-12 filter grayscale contrast-200' : 'animate-pulse'
-                  }`}>
-                    {cards.find(c => c.id === captureCardId)?.emoji || '❓'}
-                  </div>
-                  {captureStatus === 'fail' && (
-                    <div className="absolute inset-0 bg-red-950/20 flex items-center justify-center">
-                      <span className="text-red-500 text-5xl font-black rotate-12 border-4 border-red-500 px-3 py-1 rounded-xl">ESCAPE</span>
-                    </div>
-                  )}
-                  <span className="text-xs text-gray-500 font-mono">RARE ENCOUNTER</span>
-                </div>
-
-                {/* Card Back (Flipped showing Card Details on Success) */}
-                <div className="absolute inset-0 rotate-y-180 backface-hidden bg-gradient-to-b from-[#1b1e2a] to-[#090b11] border-2 border-amber-400 rounded-2xl p-4 flex flex-col justify-between shadow-[0_0_20px_rgba(245,158,11,0.25)]">
-                  <div className="flex justify-between items-center border-b border-gray-800 pb-2">
-                    <span className="text-[9px] font-mono text-amber-400 font-bold uppercase">RARE CARD</span>
-                    <span className="text-xs font-mono font-bold text-amber-400">POWER {cards.find(c => c.id === captureCardId)?.power || 60}</span>
-                  </div>
-                  <div className="text-6xl text-center my-4">{cards.find(c => c.id === captureCardId)?.emoji}</div>
-                  <div className="text-center">
-                    <h4 className="text-sm font-black text-white">{cards.find(c => c.id === captureCardId)?.name}</h4>
-                    <p className="text-[10px] text-gray-400 mt-1 line-clamp-2 leading-relaxed">{cards.find(c => c.id === captureCardId)?.description}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Particle Burst Elements on Success */}
-              {captureStatus === 'success' && (
-                <div className="absolute inset-0 pointer-events-none z-30">
-                  {Array.from({ length: 12 }).map((_, i) => {
-                    const tx = (Math.random() - 0.5) * 300;
-                    const ty = (Math.random() - 0.5) * 300;
-                    return (
-                      <div
-                        key={i}
-                        className="absolute w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"
-                        style={{
-                          left: '50%',
-                          top: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          animation: 'particle-scatter 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
-                          ['--tx' as any]: `${tx}px`,
-                          ['--ty' as any]: `${ty}px`,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Slider Minigame Interface */}
-            {captureStatus === 'aiming' ? (
-              <div className="w-full max-w-[800px] space-y-6 flex flex-col items-center">
-                
-                {/* Pokéball Selector */}
-                <div className="flex justify-center gap-3 mb-2">
-                  {[
-                    { key: 'monsterBall', name: '몬스터볼', emoji: '🔴', count: '∞' },
-                    { key: 'superBall', name: '수퍼볼', emoji: '🔵', count: progress.items?.superBall ?? 0 },
-                    { key: 'ultraBall', name: '하이퍼볼', emoji: '🟡', count: progress.items?.ultraBall ?? 0 },
-                    { key: 'masterBall', name: '마스터볼', emoji: '🟣', count: progress.items?.masterBall ?? 0 },
-                  ].map(ball => {
-                    const isSelected = selectedBallType === ball.key;
-                    const isAvailable = ball.count === '∞' || Number(ball.count) > 0;
-                    
-                    return (
-                      <button
-                        key={ball.key}
-                        disabled={!isAvailable}
-                        onClick={() => {
-                          gameAudio.playClick();
-                          setSelectedBallType(ball.key as 'monsterBall' | 'superBall' | 'ultraBall' | 'masterBall');
-                        }}
-                        className={`p-3 border rounded-xl flex items-center gap-2 transition-all ${
-                          isSelected
-                            ? 'bg-amber-950/20 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                            : isAvailable
-                              ? 'bg-gray-900/60 border-gray-850 hover:border-gray-700 text-gray-300 hover:scale-102 active:scale-98'
-                              : 'bg-gray-950/25 border-gray-950 text-gray-600 opacity-40 cursor-not-allowed'
-                        }`}
-                      >
-                        <span className="text-xl">{ball.emoji}</span>
-                        <div className="text-left leading-none">
-                          <span className="text-xs font-bold block">{ball.name}</span>
-                          <span className="text-[10px] text-gray-500 font-mono mt-0.5">소지: {ball.count}개</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Easing sliding track */}
-                <div className="w-[800px] h-10 bg-gray-950/80 border border-gray-850 rounded-xl relative flex items-center p-[2px] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] overflow-hidden">
-                  
-                  {/* Moving Target Catch Zone */}
-                  <div 
-                    style={{ left: `${greenZoneLeft}px`, width: `${getBallWidth(selectedBallType)}px` }}
-                    className="absolute top-[2px] bottom-[2px] bg-gradient-to-r from-emerald-500/20 via-emerald-400/50 to-emerald-500/20 border border-emerald-400 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(52,211,153,0.3)] transition-all duration-16 ease-linear"
-                  >
-                    <span className="text-[9px] font-black text-emerald-300 font-mono tracking-wider animate-pulse">CATCH ZONE</span>
-                  </div>
-
-                  {/* Fixed Pointer Indicator in the exact center (400px) */}
-                  <div className="absolute left-[397px] w-1.5 h-12 bg-amber-400 border border-white z-20 shadow-[0_0_8px_rgba(245,158,11,1)] rounded-full" />
-                </div>
-
-                <div className="flex flex-col items-center gap-2">
-                  <button
-                    onClick={triggerCaptureAction}
-                    className="px-10 py-4 bg-amber-500 hover:bg-amber-400 text-black text-lg font-black rounded-2xl tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.3)] btn-cyber transition-all hover:scale-105 active:scale-95 touch-target"
-                  >
-                    포획하기 (SPACE BAR / TAP)
-                  </button>
-                  <span className="text-xs text-gray-500 font-mono">가운데 노란 게이지 침이 녹색 영역 안에 머무를 때 멈추세요!</span>
-                </div>
-
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="text-2xl font-black tracking-wide">
-                  {captureStatus === 'success' ? (
-                    <span className="text-green-400">🎉 포획 성공! 도감 카드가 해금되었습니다!</span>
-                  ) : (
-                    <span className="text-red-500">💨 이번엔 놓쳤어! 다음에 도전해봐</span>
-                  )}
-                </div>
-                
-                <button
-                  onClick={handleCaptureContinue}
-                  className="px-8 py-3 bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-300 font-black rounded-xl btn-cyber transition-all touch-target"
-                >
-                  다음 퀴즈로 진행하기
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <CaptureMinigame
+          cardId={captureCardId}
+          ballItems={progress.items}
+          onSuccess={handleCaptureSuccess}
+          onFail={handleCaptureFail}
+          onConsumeBall={handleCaptureConsumeBall}
+          onContinue={handleCaptureContinue}
+        />
       )}
 
       {/* Main Quiz Flow Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Side: Question, Timer, Option lists */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Header Panel */}
           <div className="glass-panel p-4 border-cyan-500/10 flex justify-between items-center gap-4 bg-[#090f1d]/60">
             <button
@@ -921,15 +483,15 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                   </span>
                   <svg className="w-6 h-6 transform -rotate-90">
                     <circle cx="12" cy="12" r="10" className="stroke-gray-800" strokeWidth="2" fill="transparent" />
-                    <circle 
-                      cx="12" 
-                      cy="12" 
-                      r="10" 
-                      className={`transition-all duration-1000 ease-linear ${timeLeft <= 5 ? 'stroke-red-500' : 'stroke-cyan-400'}`} 
-                      strokeWidth="2" 
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      className={`transition-all duration-1000 ease-linear ${timeLeft <= 5 ? 'stroke-red-500' : 'stroke-cyan-400'}`}
+                      strokeWidth="2"
                       fill="transparent"
                       strokeDasharray={2 * Math.PI * 10}
-                      strokeDashoffset={2 * Math.PI * 10 * (1 - timeLeft / totalTime)} 
+                      strokeDashoffset={2 * Math.PI * 10 * (1 - timeLeft / totalTime)}
                     />
                   </svg>
                 </div>
@@ -1076,7 +638,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
         {/* Right Side: Scoreboard & Stats */}
         <div className="lg:col-span-1 space-y-6">
-          
+
           {/* Current Score Panel */}
           <div className="glass-panel p-5 border-cyan-500/10 bg-[#090f1d]/50 relative text-center">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">📊 점수판</h3>
@@ -1105,55 +667,6 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
         </div>
       </div>
-
-      {/* Styled Animations for custom keyframes */}
-      <style jsx global>{`
-        @keyframes scatter-out {
-          0% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.3);
-            opacity: 0;
-          }
-        }
-        
-        .perspective-1000 {
-          perspective: 1000px;
-        }
-        
-        .preserve-3d {
-          transform-style: preserve-3d;
-        }
-        
-        .backface-hidden {
-          backface-visibility: hidden;
-        }
-        
-        .rotate-y-180 {
-          transform: rotateY(180deg);
-        }
-
-        @keyframes slideInRight {
-          from {
-            transform: translateX(30px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-
-        .animate-slide-in-right {
-          animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        div[style*="--tx"] {
-          animation: scatter-out 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
-        }
-      `}</style>
 
       {levelUpToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-sm border border-white shadow-xl rounded-xl animate-bounce select-none">

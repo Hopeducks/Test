@@ -45,7 +45,8 @@ describe('카드 데이터 무결성', () => {
     // types/index.ts: CardRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
     const validRarities = new Set(['common', 'uncommon', 'rare', 'epic', 'legendary']);
     for (const card of cards) {
-      expect(validRarities.has(card.rarity)).toBe(true);
+      expect(card.rarity).toBeDefined();
+      expect(validRarities.has(card.rarity as string)).toBe(true);
     }
   });
 });
