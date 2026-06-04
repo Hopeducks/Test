@@ -3,8 +3,9 @@ import { test, expect } from '@playwright/test';
 async function goToMyPage(page: import('@playwright/test').Page) {
   await page.goto('/');
   await page.evaluate(() => {
-    localStorage.setItem('hopeducks_role', 'student');
-    localStorage.setItem('hopeducks_student_name', 'E2E학생');
+    localStorage.setItem('science_pokedex_role', 'student');
+    localStorage.setItem('science_pokedex_student_name', 'E2E학생');
+    localStorage.setItem('science_pokedex_student_avatar', '🦆');
     // 단원 1 완료 상태 시뮬레이션
     const progress = {
       unlockedCardIds: ['u1_c1', 'u1_c2'],
@@ -15,7 +16,7 @@ async function goToMyPage(page: import('@playwright/test').Page) {
       coins: 120,
       equippedCosmetics: {},
     };
-    localStorage.setItem('hopeducks_progress', JSON.stringify(progress));
+    localStorage.setItem('science_pokedex_progress', JSON.stringify(progress));
   });
   await page.reload();
   // 내 학습 기록 버튼 클릭
@@ -41,7 +42,7 @@ test.describe('MyPage', () => {
 
   test('돌아가기 버튼으로 PokedexHome에 복귀한다', async ({ page }) => {
     await goToMyPage(page);
-    await page.getByRole('button', { name: /돌아가기|← / }).click();
-    await expect(page.getByText('과학 마스터 도감')).toBeVisible();
+    await page.getByRole('button', { name: /홈으로 돌아가기/ }).click();
+    await expect(page.getByText('전체 진도')).toBeVisible();
   });
 });
