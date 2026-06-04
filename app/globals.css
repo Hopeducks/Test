@@ -250,6 +250,34 @@
   }
 }
 
+/* ── 카드 배틀 아레나: 번개/화석 파티클/DNA 소용돌이 ───────── */
+@keyframes battle-flash {
+  0%, 100% { opacity: 0; }
+  30%, 70% { opacity: 0.8; }
+}
+.animate-flash-overlay {
+  animation: battle-flash 1s ease-out forwards;
+}
+
+@keyframes scatter-particles {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.1); opacity: 0; }
+}
+.animate-particle {
+  animation: scatter-particles 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes battle-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-reverse {
+  animation: battle-spin 3s linear infinite reverse;
+}
+.animate-spin-slow {
+  animation: battle-spin 8s linear infinite;
+}
+
 /* Customized scrollbar for retro feel */
 ::-webkit-scrollbar {
   width: 8px;
