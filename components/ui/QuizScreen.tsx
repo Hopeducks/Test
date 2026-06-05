@@ -561,6 +561,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                 return (
                   <button
                     key={idx}
+                    data-testid="mc-option"
                     disabled={isAnswered || loading}
                     onClick={() => handleOptionClick(idx)}
                     className={`min-h-[64px] px-6 py-4 text-left rounded-2xl border btn-cyber transition-all duration-200 flex items-center justify-start gap-4 touch-target ${btnStyle}`}
