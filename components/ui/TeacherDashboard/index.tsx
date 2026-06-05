@@ -317,6 +317,29 @@ export default function TeacherDashboard({
     }, 2000);
   };
 
+  const handleImportStudent = (name: string, avatar: string, score: number) => {
+    if (!classroomSession) return;
+    gameAudio.playClick();
+    const exists = classroomSession.students.find(s => s.name === name);
+    if (exists) {
+      setClassroomSession({
+        ...classroomSession,
+        students: classroomSession.students.map(s =>
+          s.name === name ? { ...s, currentScore: Math.max(s.currentScore, score) } : s
+        ),
+      });
+    } else {
+      setClassroomSession({
+        ...classroomSession,
+        students: [
+          ...classroomSession.students,
+          { name, avatar, isSimulated: false, currentScore: score, currentStreak: 0, answeredCurrentQuestion: false, x: 400, y: 300 },
+        ],
+      });
+    }
+    setFeedEvents(prev => [...prev.slice(-49), { type: 'player_join', playerId: name, nickname: name, detail: `오프라인 제출 코드로 학급 명단에 등록됨 (${score}점)`, timestamp: new Date().toISOString() }]);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-4 space-y-6 font-sans text-gray-100">
 
@@ -405,7 +428,7 @@ export default function TeacherDashboard({
         </div>
       ) : activeTab === 'stats' ? (
         /* Stats Tab */
-        <StatsPanel classroomSession={classroomSession} aiClassFeedback={aiClassFeedback} onExportCSV={handleExportCSV} onCopyTSV={handleCopyTSV} onGoogleSync={handleGoogleSync} googleSyncState={googleSyncState} copied={copied} />
+        <StatsPanel classroomSession={classroomSession} aiClassFeedback={aiClassFeedback} onExportCSV={handleExportCSV} onCopyTSV={handleCopyTSV} onGoogleSync={handleGoogleSync} onImportStudent={handleImportStudent} googleSyncState={googleSyncState} copied={copied} />
       ) : (
         /* Rubric Tab */
         <div className="max-w-xl">

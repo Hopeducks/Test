@@ -1,9 +1,17 @@
 'use client';
 
-import React from 'react';
-import { Trophy, Download, FileSpreadsheet } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Download, FileSpreadsheet, ClipboardPaste, CheckCircle } from 'lucide-react';
 import { ClassroomSession } from '../../../types';
 import { getUnitTitle } from '../../../data/questions';
+
+interface ImportPreview {
+  name: string;
+  avatar: string;
+  unitId: number;
+  score: number;
+  unlockedCardsCount: number;
+}
 
 interface StatsPanelProps {
   classroomSession: ClassroomSession;
@@ -11,6 +19,7 @@ interface StatsPanelProps {
   onExportCSV: () => void;
   onCopyTSV: () => void;
   onGoogleSync: () => void;
+  onImportStudent: (name: string, avatar: string, score: number) => void;
   googleSyncState: 'idle' | 'syncing' | 'synced';
   copied: boolean;
 }
@@ -21,9 +30,48 @@ export default function StatsPanel({
   onExportCSV,
   onCopyTSV,
   onGoogleSync,
+  onImportStudent,
   googleSyncState,
   copied,
 }: StatsPanelProps) {
+  const [importCode, setImportCode] = useState('');
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importError, setImportError] = useState('');
+  const [importAdded, setImportAdded] = useState(false);
+
+  const handleDecodeCode = () => {
+    try {
+      const raw = JSON.parse(decodeURIComponent(atob(importCode.trim())));
+      const unitId: number = Array.isArray(raw.completedUnits) && raw.completedUnits.length > 0
+        ? raw.completedUnits[0]
+        : 1;
+      const rawScore: number = raw.unitScores?.[unitId] ?? 0;
+      setImportPreview({
+        name: String(raw.name || '학생'),
+        avatar: String(raw.avatar || '🧑'),
+        unitId,
+        score: Math.round(rawScore / 10),
+        unlockedCardsCount: Number(raw.unlockedCardsCount ?? 0),
+      });
+      setImportError('');
+      setImportAdded(false);
+    } catch {
+      setImportError('코드 형식이 올바르지 않습니다. 학생 화면에서 복사한 코드인지 확인하세요.');
+      setImportPreview(null);
+    }
+  };
+
+  const handleAddStudent = () => {
+    if (!importPreview) return;
+    onImportStudent(importPreview.name, importPreview.avatar, importPreview.score);
+    setImportAdded(true);
+    setTimeout(() => {
+      setImportCode('');
+      setImportPreview(null);
+      setImportAdded(false);
+    }, 2000);
+  };
+
   return (
     <div className="space-y-6">
       {/* 세션 랭킹 */}
@@ -197,6 +245,66 @@ export default function StatsPanel({
               ) : googleSyncState === 'synced' ? '구글 워크스페이스 연동됨 ✓' : '구글 워크스페이스 실시간 연계'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* 학생 오프라인 제출 코드 수집 */}
+      <div className="glass-panel p-5 border-purple-500/10">
+        <h3 className="text-sm font-extrabold text-purple-400 border-b border-gray-900 pb-2 mb-4 uppercase tracking-widest flex items-center gap-2">
+          <ClipboardPaste className="w-4 h-4" /> 학생 오프라인 제출 코드 수집
+        </h3>
+        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+          학생이 퀴즈 완료 후 복사한 <span className="text-purple-400 font-bold">교사용 제출 코드</span>를 붙여넣으면 학급 명단에 수동 등록할 수 있습니다. 오프라인 환경 또는 Supabase 미연동 상황에서 활용하세요.
+        </p>
+        <div className="space-y-3">
+          <textarea
+            value={importCode}
+            onChange={(e) => { setImportCode(e.target.value); setImportPreview(null); setImportError(''); }}
+            placeholder="학생 화면 → 퀴즈 완료 → 교사용 제출 코드 복사 → 여기에 붙여넣기 (Ctrl+V)"
+            rows={3}
+            className="w-full bg-gray-950 border border-gray-800 focus:border-purple-500/50 text-[11px] text-cyan-300 font-mono px-3 py-2 rounded-lg resize-none focus:outline-none transition-colors"
+          />
+          <button
+            onClick={handleDecodeCode}
+            disabled={!importCode.trim()}
+            className="px-4 py-2 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 hover:border-purple-400/50 text-purple-300 font-bold text-xs rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            코드 읽기
+          </button>
+
+          {importError && (
+            <p className="text-xs text-red-400 font-mono">{importError}</p>
+          )}
+
+          {importPreview && (
+            <div className="p-4 bg-purple-950/10 border border-purple-500/20 rounded-lg space-y-3">
+              <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block">// DECODED STUDENT RESULT</span>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-2xl">{importPreview.avatar}</span>
+                <div>
+                  <span className="font-bold text-gray-100 block">{importPreview.name}</span>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {importPreview.unitId}단원 · {getUnitTitle(importPreview.unitId)} · 정답 {importPreview.score}/10점 · 카드 {importPreview.unlockedCardsCount}장
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleAddStudent}
+                disabled={importAdded}
+                className={`w-full py-2 font-black text-xs rounded-lg transition-all touch-target ${
+                  importAdded
+                    ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                    : 'bg-purple-600 hover:bg-purple-500 text-white'
+                }`}
+              >
+                {importAdded ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5" /> 학급 명단에 추가 완료
+                  </span>
+                ) : '학급 명단에 추가'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
