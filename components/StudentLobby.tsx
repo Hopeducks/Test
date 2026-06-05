@@ -10,7 +10,6 @@ import {
   getUnitIcon,
   SIMULATED_CLASSMATES
 } from '../data/questions';
-import { cards } from '../data/cards';
 import useGameState from '../lib/game-state';
 import dynamic from 'next/dynamic';
 import { supabase } from '../lib/supabase-client';
@@ -26,6 +25,9 @@ const GymLeaderBattle = dynamic(() => import('./ui/GymLeaderBattle'), { ssr: fal
 const NpcQuestModal = dynamic(() => import('./ui/NpcQuestModal'), { ssr: false });
 const ZoneEntryPanel = dynamic(() => import('./ui/ZoneEntryPanel'), { ssr: false });
 const TournamentBracketView = dynamic(() => import('./ui/TournamentBracketView'), { ssr: false });
+const LobbyEntryScreen = dynamic(() => import('./ui/lobby/LobbyEntryScreen'), { ssr: false });
+const LobbyQuestsPanel = dynamic(() => import('./ui/lobby/LobbyQuestsPanel'), { ssr: false });
+const LobbyShopModal = dynamic(() => import('./ui/lobby/LobbyShopModal'), { ssr: false });
 
 // Map Dimensions
 const GRID_COLS = 120;
@@ -613,84 +615,13 @@ export default function StudentLobby({
 
       {!joinedPlayer && !classroomSession && !isSimulatedLobby ? (
         /* Lobby Entry Selector & Session Join Screen */
-        <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
-          {/* 환영 헤더 */}
-          <div className="text-center">
-            <div className="text-5xl mb-3 animate-bounce" style={{ animationDuration: '2s' }}>🔬</div>
-            <h2 className="text-2xl font-black text-gray-100 mb-2">
-              과학 탐험 세계에 오신 것을 환영합니다!
-            </h2>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
-              선생님께 받은 참여 코드로 실시간 수업에 참가하거나, 혼자서 단원을 골라 연습해보세요.
-            </p>
-          </div>
-
-          {/* 실시간 수업 참가 */}
-          <div className="rounded-2xl border-2 border-cyan-500/40 bg-gradient-to-br from-cyan-950/30 to-blue-950/20 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🎯</span>
-              <div>
-                <h3 className="font-black text-cyan-300 text-base">실시간 수업 참가</h3>
-                <p className="text-xs text-cyan-500/70">선생님이 알려주신 참여 코드를 입력하세요</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="참여 코드 입력 (예: ABC123)"
-                value={inputSessionCode}
-                onChange={(e) => setInputSessionCode(e.target.value.toUpperCase())}
-                className="flex-1 px-4 py-3 bg-gray-900 border border-cyan-500/30 rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-400 text-sm font-bold font-mono tracking-widest"
-              />
-              <button
-                onClick={handleJoinWithCode}
-                className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black text-sm font-black rounded-xl transition-all shadow-[0_4px_20px_rgba(6,182,212,0.4)]"
-              >
-                참가 →
-              </button>
-            </div>
-          </div>
-
-          {/* 혼자 연습하기 */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">📚</span>
-              <h3 className="font-black text-gray-200 text-base">혼자 연습하기</h3>
-              <span className="text-xs text-gray-500 font-normal">단원을 골라 AI 친구들과 함께 복습!</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((unitId) => {
-                const isLocked = unitId > 1 && !progress.unlockedBadges?.includes(`accessory_badge_u${unitId - 1}`);
-                const unitColors = [
-                  'from-amber-950/40 border-amber-500/30 hover:border-amber-400',
-                  'from-blue-950/40 border-blue-500/30 hover:border-blue-400',
-                  'from-emerald-950/40 border-emerald-500/30 hover:border-emerald-400',
-                  'from-rose-950/40 border-rose-500/30 hover:border-rose-400',
-                  'from-violet-950/40 border-violet-500/30 hover:border-violet-400',
-                  'from-sky-950/40 border-sky-500/30 hover:border-sky-400',
-                  'from-orange-950/40 border-orange-500/30 hover:border-orange-400',
-                  'from-teal-950/40 border-teal-500/30 hover:border-teal-400',
-                ];
-                return (
-                  <button
-                    key={unitId}
-                    disabled={isLocked}
-                    onClick={() => handleInitSimulatedLobby(unitId)}
-                    className={`p-3 border rounded-xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1.5 touch-target bg-gradient-to-b ${
-                      isLocked
-                        ? 'from-gray-950/20 border-gray-800 text-gray-600 opacity-40 cursor-not-allowed'
-                        : `${unitColors[unitId - 1]} text-gray-200 active:scale-95`
-                    }`}
-                  >
-                    <span className="text-xl">{isLocked ? '🔒' : getUnitIcon(unitId)}</span>
-                    <span className="line-clamp-1 font-bold">{unitId}단원</span>
-                    <span className="text-[10px] opacity-70 line-clamp-1">{getUnitTitle(unitId)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <LobbyEntryScreen
+          inputSessionCode={inputSessionCode}
+          onInputChange={setInputSessionCode}
+          onJoinWithCode={handleJoinWithCode}
+          onSelectUnit={handleInitSimulatedLobby}
+          unlockedBadges={progress.unlockedBadges}
+        />
       ) : (
         <>
           {/* Active Metaverse Lobby Map view */}
@@ -843,174 +774,11 @@ export default function StudentLobby({
                   </div>
                 </div>
               ) : (
-                <div className="glass-panel p-4 border-cyan-500/10 space-y-3 max-h-[300px] overflow-y-auto min-h-[220px]">
-                  <div className="text-[11px] font-bold text-gray-400 text-center border-b border-gray-900 pb-2 mb-2">
-                    📋 내 퀘스트 &amp; 보상
-                  </div>
-                  {/* Render Quests */}
-                  {(() => {
-                    const myCoins = progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10;
-                    const cardLevelsSum = progress.unlockedCardIds.reduce((sum, id) => sum + (progress.cardLevels?.[id] || 1), 0);
-                    const badgesCount = progress.unlockedBadges?.length || 0;
-                    
-                    const questCategories = [
-                      {
-                        category: 'solver',
-                        namePrefix: '퀴즈 해결사',
-                        tiers: [
-                          { max: 1, reward: 30, desc: '단원 복습 퀴즈 1회 완료하기' },
-                          { max: 3, reward: 60, desc: '단원 복습 퀴즈 3회 완료하기' },
-                          { max: 7, reward: 120, desc: '단원 복습 퀴즈 7회 완료하기' },
-                          { max: 15, reward: 250, desc: '단원 복습 퀴즈 15회 완료하기' },
-                          { max: 30, reward: 500, desc: '단원 복습 퀴즈 30회 완료하기' }
-                        ],
-                        currentVal: progress.completedUnits.length
-                      },
-                      {
-                        category: 'collector',
-                        namePrefix: '지식의 수집가',
-                        tiers: [
-                          { max: 5, reward: 50, desc: '과학 도감 카드 5장 해금하기' },
-                          { max: 15, reward: 100, desc: '과학 도감 카드 15장 해금하기' },
-                          { max: 25, reward: 200, desc: '과학 도감 카드 25장 해금하기' },
-                          { max: 40, reward: 400, desc: '과학 도감 카드 40장 해금하기' },
-                          { max: 48, reward: 800, desc: '과학 도감 카드 48장 모두 해금하기' }
-                        ],
-                        currentVal: progress.unlockedCardIds.length
-                      },
-                      {
-                        category: 'wealth',
-                        namePrefix: '백만장자',
-                        tiers: [
-                          { max: 100, reward: 30, desc: '보유 코인 100개 이상 달성하기' },
-                          { max: 300, reward: 60, desc: '보유 코인 300개 이상 달성하기' },
-                          { max: 700, reward: 120, desc: '보유 코인 700개 이상 달성하기' },
-                          { max: 1500, reward: 250, desc: '보유 코인 1500개 이상 달성하기' },
-                          { max: 3000, reward: 500, desc: '보유 코인 3000개 이상 달성하기' }
-                        ],
-                        currentVal: myCoins
-                      },
-                      {
-                        category: 'trainer',
-                        namePrefix: '만렙 트레이너',
-                        tiers: [
-                          { max: 2, reward: 50, desc: '트레이너 레벨 2 달성하기' },
-                          { max: 3, reward: 100, desc: '트레이너 레벨 3 달성하기' },
-                          { max: 4, reward: 200, desc: '트레이너 레벨 4 달성하기' },
-                          { max: 5, reward: 405, desc: '트레이너 레벨 5 달성하기' },
-                          { max: 6, reward: 800, desc: '트레이너 레벨 6 달성하기' }
-                        ],
-                        currentVal: getTrainerInfo().level
-                      },
-                      {
-                        category: 'pokemon',
-                        namePrefix: '포켓몬 성장',
-                        tiers: [
-                          { max: 10, reward: 50, desc: '해금 카드들의 레벨 합계 10 달성하기' },
-                          { max: 25, reward: 100, desc: '해금 카드들의 레벨 합계 25 달성하기' },
-                          { max: 50, reward: 200, desc: '해금 카드들의 레벨 합계 50 달성하기' },
-                          { max: 100, reward: 400, desc: '해금 카드들의 레벨 합계 100 달성하기' },
-                          { max: 150, reward: 800, desc: '해금 카드들의 레벨 합계 150 달성하기' }
-                        ],
-                        currentVal: cardLevelsSum
-                      },
-                      {
-                        category: 'badge',
-                        namePrefix: '체육관 뱃지 수집',
-                        tiers: [
-                          { max: 1, reward: 100, desc: '체육관 뱃지 1개 이상 수집하기' },
-                          { max: 3, reward: 200, desc: '체육관 뱃지 3개 이상 수집하기' },
-                          { max: 5, reward: 350, desc: '체육관 뱃지 5개 이상 수집하기' },
-                          { max: 7, reward: 500, desc: '체육관 뱃지 7개 이상 수집하기' },
-                          { max: 8, reward: 1000, desc: '체육관 뱃지 8개 모두 수집하기' }
-                        ],
-                        currentVal: badgesCount
-                      }
-                    ];
-
-                    const questsList = questCategories.map(cat => {
-                      let activeTierIdx = -1;
-                      for (let i = 0; i < cat.tiers.length; i++) {
-                        const qId = `quest_${cat.category}_t${i + 1}`;
-                        if (!progress.claimedQuestIds?.includes(qId)) {
-                          activeTierIdx = i;
-                          break;
-                        }
-                      }
-
-                      if (activeTierIdx === -1) {
-                        return {
-                          id: `quest_${cat.category}_cleared`,
-                          name: `${cat.namePrefix}`,
-                          desc: '모든 티어 클리어 완료!',
-                          prog: cat.tiers[cat.tiers.length - 1].max,
-                          max: cat.tiers[cat.tiers.length - 1].max,
-                          reward: 0,
-                          isAllCleared: true
-                        };
-                      }
-
-                      const activeTier = cat.tiers[activeTierIdx];
-                      const romanNumerals = ['I', 'II', 'III', 'IV', 'V'];
-                      
-                      return {
-                        id: `quest_${cat.category}_t${activeTierIdx + 1}`,
-                        name: `${cat.namePrefix} ${romanNumerals[activeTierIdx]}`,
-                        desc: activeTier.desc,
-                        prog: cat.currentVal,
-                        max: activeTier.max,
-                        reward: activeTier.reward,
-                        isAllCleared: false
-                      };
-                    });
-
-                    return questsList.filter(q => !q.isAllCleared).map(quest => {
-                      const isClaimed = progress.claimedQuestIds?.includes(quest.id) || false;
-                      const isReady = quest.prog >= quest.max && !isClaimed;
-                      const percent = Math.min(100, Math.round((quest.prog / quest.max) * 100));
-
-                      return (
-                        <div key={quest.id} className="p-2 border border-gray-900 bg-gray-950/20 rounded-lg space-y-1 text-left">
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-[10px] font-black text-gray-100">{quest.name}</span>
-                            <span className="text-[9px] font-mono text-cyan-400 font-bold">{quest.prog}/{quest.max}</span>
-                          </div>
-                          <p className="text-[9px] text-gray-400 leading-tight">{quest.desc}</p>
-                          
-                          {/* Progress bar */}
-                          <div className="w-full h-1 bg-gray-900 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyan-500" style={{ width: `${percent}%` }} />
-                          </div>
-
-                          <div className="flex justify-between items-center pt-0.5">
-                            <span className="text-[9px] font-bold text-amber-400 flex items-center gap-0.5">
-                              🪙 {quest.reward}
-                            </span>
-                            {isClaimed ? (
-                              <span className="text-[9px] font-bold text-gray-500 font-sans border border-gray-900 px-1.5 py-0.5 rounded bg-gray-950/40">
-                                완료됨
-                              </span>
-                            ) : isReady ? (
-                              <button
-                                onClick={() => {
-                                  gameAudio.playCatchSuccess();
-                                  claimQuestReward(quest.id, quest.reward);
-                                }}
-                                className="text-[9px] font-black bg-emerald-500 hover:bg-emerald-450 text-black px-2 py-0.5 rounded transition-all animate-pulse"
-                              >
-                                보상 받기
-                              </button>
-                            ) : (
-                              <span className="text-[9px] font-bold text-gray-650 font-sans border border-gray-900 px-1.5 py-0.5 rounded bg-transparent select-none">
-                                진행 중
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+                <LobbyQuestsPanel
+                  progress={progress}
+                  getTrainerInfo={getTrainerInfo}
+                  onClaimQuest={claimQuestReward}
+                />
               )}
             </div>
 
@@ -1148,89 +916,11 @@ export default function StudentLobby({
 
         {/* Shop Modal Overlay */}
         {showShopModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-            <div className="glass-panel w-full max-w-2xl p-6 border-amber-500/30 bg-gradient-to-b from-[#140e06] to-[#040301] shadow-2xl relative animate-scale-up">
-              {/* Header */}
-              <div className="flex justify-between items-center border-b border-amber-500/20 pb-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🪙</span>
-                  <div>
-                    <h3 className="text-lg font-black text-amber-450">포켓 상점 (Poké Shop)</h3>
-                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">// MERCHANT SUPPLIER DR. POKE</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="bg-amber-950/40 border border-amber-500/30 rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-black text-amber-300">
-                    <span>보유 코인:</span>
-                    <span>🪙 {progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      gameAudio.playClick();
-                      setShowShopModal(false);
-                    }}
-                    className="text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                  >
-                    닫기 (CLOSE)
-                  </button>
-                </div>
-              </div>
-
-              {/* Items Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[350px] overflow-y-auto pr-1">
-                {[
-                  { key: 'superBall', name: '수퍼볼', emoji: '🔵', desc: '카드 포획 확률 1.5배 상승 (성공 구간 확대)', price: 50 },
-                  { key: 'ultraBall', name: '하이퍼볼', emoji: '🟡', desc: '카드 포획 확률 2.0배 상승 (성공 구간 대폭 확대)', price: 100 },
-                  { key: 'masterBall', name: '마스터볼', emoji: '🟣', desc: '포획 확률 100% 무조건 성공 보장 (화면 전체 판정)', price: 300 },
-                  { key: 'potion', name: '상처약', emoji: '🧪', desc: '1v1 카드 배틀 매치에서 HP를 30 회복합니다.', price: 20 },
-                  { key: 'potionHyper', name: '좋은상처약', emoji: '🔋', desc: '1v1 카드 배틀 매치에서 HP를 60 회복합니다.', price: 40 },
-                  { key: 'potionMax', name: '풀회복약', emoji: '🌟', desc: '1v1 카드 배틀 매치에서 HP를 100% 회복합니다.', price: 80 },
-                  { key: 'revive', name: '기력의조각', emoji: '💊', desc: '위기 상태(체력 30 이하)에서 체력을 50 회복합니다.', price: 60 },
-                  { key: 'magnifier', name: '돋보기', emoji: '🔍', desc: '퀴즈를 풀 때 오답 2개를 지워줍니다.', price: 15 },
-                  { key: 'watch', name: '모래시계', emoji: '⏱️', desc: '보스전 및 시간제한 상황에서 제한시간을 10초 늘려줍니다.', price: 15 }
-                ].map(item => {
-                  const owned = progress.items?.[item.key as keyof typeof progress.items] || 0;
-                  const myCoins = progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10;
-                  const canBuy = myCoins >= item.price;
-
-                  return (
-                    <div key={item.key} className="p-3 bg-gray-950/60 border border-gray-900 rounded-xl flex flex-col justify-between space-y-3 relative group hover:border-amber-500/25 transition-all text-left">
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-2xl shrink-0 animate-bounce">{item.emoji}</span>
-                          <span className="text-[10px] font-bold text-gray-500 font-mono">소지: {owned}개</span>
-                        </div>
-                        <h4 className="text-xs font-black text-gray-200">{item.name}</h4>
-                        <p className="text-[9px] text-gray-405 leading-normal line-clamp-3">{item.desc}</p>
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-gray-900 pt-2 mt-auto">
-                        <span className="text-[11px] font-black text-amber-400">🪙 {item.price}</span>
-                        <button
-                          disabled={!canBuy}
-                          onClick={() => {
-                            const success = purchaseItem(item.key as any, item.price, 1);
-                            if (success) {
-                              gameAudio.playCatchSuccess();
-                            } else {
-                              gameAudio.playWrong();
-                            }
-                          }}
-                          className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all ${
-                            canBuy
-                              ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_6px_rgba(245,158,11,0.2)]'
-                              : 'bg-gray-900 text-gray-650 cursor-not-allowed'
-                          }`}
-                        >
-                          구매
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          <LobbyShopModal
+            progress={progress}
+            onPurchase={purchaseItem}
+            onClose={() => setShowShopModal(false)}
+          />
         )}
         </>
       )}
