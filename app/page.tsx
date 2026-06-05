@@ -70,6 +70,19 @@ export default function Home() {
     const local = getLocalPlayer();
     if (local) setPlayer(local);
   }, [activeScreen]);
+
+  // E2E test-only: ?e2e=battle/raid bypasses lobby flow
+  useEffect(() => {
+    const e2eParam = new URLSearchParams(window.location.search).get('e2e');
+    if (e2eParam === 'battle') {
+      setActiveScreen('battle');
+    } else if (e2eParam === 'raid') {
+      const local = getLocalPlayer();
+      if (local) setPlayer(local);
+      setActiveScreen('raid');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Last Quiz Session Results
   const [quizScore, setQuizScore] = useState<number>(0);
