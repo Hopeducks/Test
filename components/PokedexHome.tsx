@@ -81,7 +81,7 @@ export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage,
           {onViewMyPage && (
             <button
               onClick={() => { gameAudio.playClick(); onViewMyPage(); }}
-              className="flex items-center gap-2 px-5 py-3 bg-purple-950/40 border border-purple-500/40 hover:border-purple-400 hover:bg-purple-950/70 text-purple-300 hover:text-white font-bold rounded-lg transition-all text-sm touch-target"
+              className="flex items-center gap-2 px-5 py-3 bg-purple-950/40 border border-purple-500/40 hover:border-purple-400 hover:bg-purple-950/70 text-purple-300 hover:text-white font-bold rounded-lg transition-all text-base touch-target"
             >
               <User className="w-4 h-4" />
               내 학습 기록
@@ -90,7 +90,7 @@ export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage,
           {onViewLeaderboard && (
             <button
               onClick={() => { gameAudio.playClick(); onViewLeaderboard(); }}
-              className="flex items-center gap-2 px-5 py-3 bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 hover:bg-amber-950/70 text-amber-300 hover:text-white font-bold rounded-lg transition-all text-sm touch-target"
+              className="flex items-center gap-2 px-5 py-3 bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 hover:bg-amber-950/70 text-amber-300 hover:text-white font-bold rounded-lg transition-all text-base touch-target"
             >
               <Trophy className="w-4 h-4" />
               랭킹
@@ -153,7 +153,7 @@ export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage,
 
               {/* 진행 정보 */}
               <div className="mt-6 space-y-4">
-                <div className="flex justify-between items-center text-sm">
+                <div className="flex justify-between items-center text-base">
                   <span className="text-gray-400 font-medium">카드 해금</span>
                   <span className="font-mono-numbers text-white font-bold">
                     {unitUnlockedCount} / {unitCards.length}
@@ -172,7 +172,7 @@ export default function PokedexHome({ onSelectUnit, onViewPokedex, onViewMyPage,
                   />
                 </div>
 
-                <div className="flex justify-between items-center text-sm border-t border-amber-500/10 pt-3">
+                <div className="flex justify-between items-center text-base border-t border-amber-500/10 pt-3">
                   <span className="text-gray-400 flex items-center gap-1.5 font-medium">
                     <Award className="w-4 h-4 text-amber-500" />
                     최고 점수

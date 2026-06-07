@@ -463,7 +463,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
             <div className="text-right">
               <span className="text-[10px] text-gray-500 font-mono block">PROGRESS</span>
-              <span className="text-sm font-extrabold text-cyan-400 font-mono">{currentIndex + 1} / {questionsList.length}</span>
+              <span className="text-base font-extrabold text-cyan-400 font-mono">{currentIndex + 1} / {questionsList.length}</span>
             </div>
           </div>
 
@@ -506,14 +506,14 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                 <div className="mt-4 w-full">
                   {showHint ? (
                     <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl px-4 py-3 text-left animate-slide-up">
-                      <p className="text-amber-300 text-sm font-medium leading-relaxed">
+                      <p className="text-amber-300 text-lg font-medium leading-relaxed">
                         💡 {currentQuestion.hint}
                       </p>
                     </div>
                   ) : (
                     <button
                       onClick={() => { gameAudio.playClick(); setShowHint(true); }}
-                      className="text-xs text-amber-500/70 hover:text-amber-400 border border-amber-500/20 hover:border-amber-500/50 px-3 py-1.5 rounded-lg transition-all font-medium"
+                      className="text-sm text-amber-500/70 hover:text-amber-400 border border-amber-500/20 hover:border-amber-500/50 px-4 py-2.5 rounded-lg transition-all font-medium touch-target"
                     >
                       💡 힌트 보기
                     </button>
@@ -566,7 +566,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                     onClick={() => handleOptionClick(idx)}
                     className={`min-h-[64px] px-6 py-4 text-left rounded-2xl border btn-cyber transition-all duration-200 flex items-center justify-start gap-4 touch-target ${btnStyle}`}
                   >
-                    <span className={`w-8 h-8 rounded-full border flex items-center justify-center font-mono font-black text-sm shrink-0 ${
+                    <span className={`w-8 h-8 rounded-full border flex items-center justify-center font-mono font-black text-base shrink-0 ${
                       isAnswered
                         ? idx === (currentQuestion as MCQuestion).correctIndex
                           ? 'border-emerald-500 bg-emerald-500 text-black'
@@ -577,7 +577,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                     }`}>
                       {optionLetters[idx]}
                     </span>
-                    <span className="text-[17px] md:text-[19px] font-bold">{option}</span>
+                    <span className="text-xl font-bold">{option}</span>
                   </button>
                 );
               })}
@@ -591,33 +591,33 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     {(isMCQuestion(currentQuestion) ? selectedOption === (currentQuestion as MCQuestion).correctIndex : flashType === 'correct') ? (
-                      <span className="text-emerald-400 font-extrabold text-sm flex items-center gap-1.5">
-                        <CheckCircle className="w-4 h-4" /> 정답입니다! (Correct)
+                      <span className="text-emerald-400 font-extrabold text-lg flex items-center gap-1.5">
+                        <CheckCircle className="w-5 h-5" /> 정답입니다! (Correct)
                       </span>
                     ) : (
-                      <span className="text-red-400 font-extrabold text-sm flex items-center gap-1.5">
-                        <AlertTriangle className="w-4 h-4" /> 오답입니다. (Incorrect)
+                      <span className="text-red-400 font-extrabold text-lg flex items-center gap-1.5">
+                        <AlertTriangle className="w-5 h-5" /> 오답입니다. (Incorrect)
                       </span>
                     )}
                   </div>
 
                   {isMCQuestion(currentQuestion) && (
-                    <div className="text-base text-cyan-400 font-bold mb-2">
+                    <div className="text-xl text-cyan-400 font-bold mb-2">
                       정답: {optionLetters[(currentQuestion as MCQuestion).correctIndex]}. {(currentQuestion as MCQuestion).options[(currentQuestion as MCQuestion).correctIndex]}
                     </div>
                   )}
                   {isOXQuestion(currentQuestion) && (
-                    <div className="text-base text-cyan-400 font-bold mb-2">
+                    <div className="text-xl text-cyan-400 font-bold mb-2">
                       정답: {currentQuestion.correctIndex === 0 ? '⭕ 맞다 (O)' : '❌ 틀리다 (X)'}
                     </div>
                   )}
                   {isShortQuestion(currentQuestion) && (
-                    <div className="text-base text-cyan-400 font-bold mb-2">
+                    <div className="text-xl text-cyan-400 font-bold mb-2">
                       정답: {currentQuestion.correctAnswer}
                     </div>
                   )}
 
-                  <p className="text-gray-300 text-[15px] md:text-[16px] leading-relaxed font-medium">
+                  <p className="text-gray-300 text-lg md:text-xl leading-relaxed font-medium">
                     {currentQuestion.explanation}
                   </p>
                 </div>
@@ -627,7 +627,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
               {isReadyToAdvance && (
                 <button
                   onClick={() => { gameAudio.playClick(); handleNext(); }}
-                  className="mt-4 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-black rounded-xl transition-all touch-target flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.25)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] text-base"
+                  className="mt-4 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-black rounded-xl transition-all touch-target flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.25)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] text-xl"
                 >
                   {currentIndex < questionsList.length - 1 ? '다음 문제 ▶' : '결과 보기 🏆'}
                 </button>
@@ -659,7 +659,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
               <div className="w-20 h-20 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center text-4xl mx-auto mb-3 animate-pulse">
                 {cards.find(c => c.id === currentQuestion.cardReward)?.emoji || '❓'}
               </div>
-              <span className="text-sm font-black text-gray-100">{cards.find(c => c.id === currentQuestion.cardReward)?.name || '보상 카드'}</span>
+              <span className="text-base font-black text-gray-100">{cards.find(c => c.id === currentQuestion.cardReward)?.name || '보상 카드'}</span>
               <div className="text-[10px] text-gray-500 font-mono mt-1 uppercase">
                 {cards.find(c => c.id === currentQuestion.cardReward)?.rarity || 'common'} Rarity
               </div>
@@ -670,7 +670,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
       </div>
 
       {levelUpToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-sm border border-white shadow-xl rounded-xl animate-bounce select-none">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-base border border-white shadow-xl rounded-xl animate-bounce select-none">
           ⭐ {levelUpToast} ⭐
         </div>
       )}

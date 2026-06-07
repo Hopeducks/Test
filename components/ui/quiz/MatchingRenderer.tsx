@@ -47,7 +47,7 @@ export default function MatchingRenderer({ question, isAnswered, onAnswer }: Mat
               key={i}
               onClick={() => handleLeftClick(i)}
               disabled={isAnswered}
-              className={`w-full px-4 py-3 rounded-xl border text-sm font-bold text-left transition-all ${
+              className={`w-full px-4 py-3 rounded-xl border text-base font-bold text-left transition-all touch-target ${
                 selectedLeft === i ? 'border-cyan-400 bg-cyan-950/30 text-cyan-300'
                 : i in connections ? 'border-emerald-500/50 bg-emerald-950/10 text-emerald-300'
                 : 'border-gray-800 bg-gray-950/40 text-gray-300 hover:border-gray-700'
@@ -68,7 +68,7 @@ export default function MatchingRenderer({ question, isAnswered, onAnswer }: Mat
                 key={shuffledIdx}
                 onClick={() => handleRightClick(shuffledIdx)}
                 disabled={isAnswered || isConnected}
-                className={`w-full px-4 py-3 rounded-xl border text-sm text-left transition-all ${
+                className={`w-full px-4 py-3 rounded-xl border text-base text-left transition-all touch-target ${
                   isAnswered
                     ? isCorrectPair ? 'border-emerald-500 bg-emerald-950/20 text-emerald-300' : 'border-red-500/50 bg-red-950/10 text-red-400'
                   : isConnected ? 'border-gray-700 bg-gray-950/20 text-gray-600 opacity-50'
@@ -83,7 +83,7 @@ export default function MatchingRenderer({ question, isAnswered, onAnswer }: Mat
         </div>
       </div>
       {!isAnswered && allConnected && (
-        <button onClick={handleSubmit} className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-xl transition-all">
+        <button onClick={handleSubmit} className="w-full py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-xl transition-all touch-target text-lg">
           채점하기 ✓
         </button>
       )}
