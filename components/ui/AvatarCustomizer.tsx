@@ -290,25 +290,19 @@ export default function AvatarCustomizer({ onClose }: AvatarCustomizerProps) {
     };
 
     try {
-      // Update players table
       const { error } = await supabase
         .from('players')
-        .update({
-          avatar: finalAvatar,
-        })
+        .update({ avatar: finalAvatar })
         .eq('id', player.id);
-
-      if (error) throw error;
-
-      // Update state manager and close
-      setLocalPlayer(updatedPlayer);
-      onClose();
+      if (error) console.warn('Supabase update failed (offline?), saving locally only', error);
     } catch (err) {
-      console.error(err);
-      setMessage({ text: '아바타 설정을 저장하는 도중 실패했습니다.', isError: true });
-    } finally {
-      setLoading(false);
+      console.warn('Supabase unreachable, saving locally only', err);
     }
+
+    // Always apply locally regardless of Supabase result
+    setLocalPlayer(updatedPlayer);
+    setLoading(false);
+    onClose();
   };
 
   // Rarity styling helpers — 4단계 등급(epic 포함)

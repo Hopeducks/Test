@@ -29,6 +29,11 @@ import {
   topTwoPowerSum,
   deriveCp,
 } from './progression';
+import { migrateLegacyState } from './legacy-migration';
+import {
+  EVOLUTION_LEVELS,
+  getCardEvolution as cardEvolutionFn,
+} from './card-evolution';
 
 // 속성(Attribute) 시스템은 lib/attributes.ts로 추출됨.
 // 기존 import 경로 하위 호환을 위해 game-state에서 re-export 한다.
@@ -42,8 +47,6 @@ export {
   getEffectivenessLabel
 } from './attributes';
 
-// 이 파일 내부(예: getRandomCardForUnit)에서도 사용하므로 값으로 import.
-import { getCardAttribute } from './attributes';
 
 export interface GameState {
   progress: GameProgress;
@@ -84,9 +87,6 @@ const DEFAULT_PROGRESS: GameProgress = {
     revive: 0,
   },
 };
-
-/** 카드 진화 단계 경계 레벨 — getCardEvolution / gainCardXp 단일 진실 원천. */
-const EVOLUTION_LEVELS = { stage2: 4, stage3: 8 } as const;
 
 class GameStateManager {
   private state: GameState = {
@@ -220,66 +220,14 @@ class GameStateManager {
         // Attempt migration from legacy storage key (Science Pokedex Review Webapp v1)
         const legacyData = localStorage.getItem('sci_pokedex_game_state_v1');
         if (legacyData) {
-          try {
-            const parsedLegacy = JSON.parse(legacyData);
-            
-            const completedUnits: number[] = [];
-            const unitHighScores: Record<number, number> = {};
-            
-            if (parsedLegacy.completedQuizzes) {
-              Object.entries(parsedLegacy.completedQuizzes).forEach(([key, val]) => {
-                const match = key.match(/unit(\d+)/);
-                if (match) {
-                  const unitNum = parseInt(match[1], 10);
-                  completedUnits.push(unitNum);
-                  const legacyScore = typeof val === 'number' ? val : 0;
-                  // Scale from 100-pt to 10-pt system (e.g. 100 -> 10, 80 -> 8)
-                  unitHighScores[unitNum] = Math.round(legacyScore / 10);
-                }
-              });
-            }
-            
-            const unlockedCardIds: string[] = [];
-            const LEGACY_ID_TO_NAME: Record<number, string> = {
-              74: "꼬마돌", 95: "롱스톤", 139: "암스타", 141: "투구푸스", 142: "프테라",
-              58: "가디", 171: "랜턴", 25: "피카츄", 181: "전룡", 145: "썬더",
-              7: "꼬부기", 54: "고라파덕", 86: "쥬쥬", 131: "라프라스", 382: "가이오가",
-              113: "럭키", 63: "캐이시", 64: "윤겔라", 196: "에브이", 150: "뮤츠",
-              10: "캐터피", 43: "뚜벅초", 1: "이상해씨", 127: "쁘사이저", 251: "세레비",
-              16: "구구", 351: "캐스퐁", 144: "프리져", 148: "신용", 384: "레쿠쟈",
-              66: "알통몬", 81: "코일", 106: "시라소몬", 448: "루카리오", 376: "메타그로스",
-              23: "아보", 109: "또가스", 88: "질퍽이", 71: "우츠보트", 94: "팬텀"
-            };
-            
-            if (Array.isArray(parsedLegacy.caughtPokemon)) {
-              parsedLegacy.caughtPokemon.forEach((legacyId: string | number) => {
-                const name = LEGACY_ID_TO_NAME[Number(legacyId)];
-                if (name) {
-                  const card = cards.find(c => c.name === name);
-                  if (card) {
-                    unlockedCardIds.push(card.id);
-                  }
-                }
-              });
-            }
-            
-            this.state.progress = {
-              unlockedCardIds,
-              completedUnits,
-              unitHighScores,
-              items: { potion: 3, magnifier: 3, watch: 3 }
-            };
-            
-            if (parsedLegacy.soundEnabled !== undefined) {
-              this.state.soundOn = !!parsedLegacy.soundEnabled;
-            } else if (parsedLegacy.audioEnabled !== undefined) {
-              this.state.soundOn = !!parsedLegacy.audioEnabled;
-            }
-            
+          const migrated = migrateLegacyState(legacyData);
+          if (migrated) {
+            this.state.progress = { ...migrated.progress } as GameProgress;
+            if (migrated.soundOn !== undefined) this.state.soundOn = migrated.soundOn;
             shouldSaveAfterLoad = true;
             console.log('Successfully migrated legacy game state from v1 to Metaverse progress:', this.state.progress);
-          } catch (e) {
-            console.error('Failed to migrate legacy state:', e);
+          } else {
+            console.error('Failed to migrate legacy state');
             this.state.progress = {
               unlockedCardIds: [],
               completedUnits: [],
@@ -292,11 +240,7 @@ class GameStateManager {
             unlockedCardIds: [],
             completedUnits: [],
             unitHighScores: {},
-            items: {
-              potion: 3,
-              magnifier: 3,
-              watch: 3
-            }
+            items: { potion: 3, magnifier: 3, watch: 3 }
           };
         }
       }
@@ -1155,55 +1099,7 @@ class GameStateManager {
   }
 
   getCardEvolution(cardId: string, level: number) {
-    const card = cards.find(c => c.id === cardId);
-    if (!card) {
-      return {
-        name: '알 수 없음',
-        emoji: '❓',
-        stage: 1,
-        skills: ['몸통박치기']
-      };
-    }
-
-    const attribute = getCardAttribute(card.unitId);
-    
-    // Skills mapping based on attribute
-    const attributeSkills: Record<string, string[]> = {
-      '땅': ['몸통박치기', '모래뿌리기', '지진 🪨'],
-      '전기': ['전기자석파', '10만볼트', '번개 ⚡'],
-      '물': ['거품', '물대포', '하이드로펌프 💧'],
-      '에스퍼': ['명상', '환상빔', '사이코키네시스 🔮'],
-      '풀': ['잎날여르기', '덩굴채찍', '솔라빔 🍃'],
-      '비행': ['바람일으키기', '에어슬래시', '폭풍 🌪️'],
-      '노말': ['몸통박치기', '헤드버트', '기가임팩트 ⚪'],
-      '불꽃': ['불꽃세례', '화염방사', '오버히트 🔥']
-    };
-
-    const allSkills = attributeSkills[attribute] || attributeSkills['노말'];
-    const activeSkills = [allSkills[0]];
-    if (level >= EVOLUTION_LEVELS.stage2) activeSkills.push(allSkills[1]);
-    if (level >= EVOLUTION_LEVELS.stage3) activeSkills.push(allSkills[2]);
-
-    let evolvedName = card.name;
-    let evolvedEmoji = card.image || card.emoji || '❓';
-    let stage = 1;
-
-    if (level >= EVOLUTION_LEVELS.stage3) {
-      evolvedName = `초강력 ${card.name}`;
-      evolvedEmoji = `👑${card.image || card.emoji || '❓'}`;
-      stage = 3;
-    } else if (level >= EVOLUTION_LEVELS.stage2) {
-      evolvedName = `진화한 ${card.name}`;
-      evolvedEmoji = `${card.image || card.emoji || '❓'}✨`;
-      stage = 2;
-    }
-
-    return {
-      name: evolvedName,
-      emoji: evolvedEmoji,
-      stage,
-      skills: activeSkills
-    };
+    return cardEvolutionFn(cardId, level);
   }
 
   gainCardXp(cardIds: string[], amount: number) {

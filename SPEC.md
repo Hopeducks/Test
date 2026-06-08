@@ -36,11 +36,16 @@
 *   **단원별 카드 구성**:
     *   **일반/희귀 카드 9개**: 개별 문항 정답 맞춤 시 최초 1회 해금 (`cardReward` 매핑)
     *   **진화형 전설 카드 1개**: 퀴즈 10문제를 모두 풀어 단원을 최종 클리어했을 때 해금
+*   **카드 등급 (4단계)**:
+    *   `common` — 일반 (흰색 테두리)
+    *   `rare` — 희귀 (초록 에메랄드 테두리)
+    *   `epic` — 에픽 (자홍 푸치시아 테두리, 진화 연출 포함)
+    *   `legendary` — 전설 (황금 앰버 테두리, 단원 클리어 보상)
 *   **카드 속성**:
     *   `id`: 카드 고유 식별자 (string)
     *   `name`: 카드 이름 (Korean)
     *   `image`: 이모지(Emoji) 또는 CSS 아트
-    *   `rarity`: 등급 (`common` | `rare` | `legendary`)
+    *   `rarity`: 등급 (`common` | `rare` | `epic` | `legendary`)
     *   `unitId`: 소속 단원 ID (number, 1~8)
     *   `description`: 교실 빔프로젝터 가독성을 준수한 상세 과학 교과 설명 (Korean)
 
@@ -68,7 +73,7 @@ export interface CollectibleCard {
   unitId: number;
   name: string;
   image: string; // Emoji 또는 CSS 아트 코드
-  rarity: 'common' | 'rare' | 'legendary';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
   description: string;
 }
 ```

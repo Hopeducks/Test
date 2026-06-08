@@ -1,3 +1,15 @@
+export const TILE_SIZE = 32;
+export const MAP_WIDTH = 120;
+export const MAP_HEIGHT = 90;
+
+export const DEPTH_FLOOR = -30;
+export const DEPTH_ZONE_FLOOR = -25;
+export const DEPTH_ZONE_GFX = -20;
+export const DEPTH_DECOR = -15;
+export const DEPTH_BG_PARTICLE = -12;
+export const DEPTH_WALL = -8;
+export const DEPTH_OVERLAY = 1000;
+
 export interface Portal {
   zoneName: string;
   x: number;
