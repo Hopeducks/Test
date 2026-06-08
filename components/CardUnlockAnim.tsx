@@ -16,15 +16,18 @@ export default function CardUnlockAnim({ cardId, onContinue }: CardUnlockAnimPro
   const [isFlipped, setIsFlipped] = useState(false);
   const [showButton, setShowButton] = useState(false);
 
-  // Determine rarity colors
+  // Determine rarity colors — epic 포함 4단계 정식화(F-2)
   const isLegendary = card?.rarity === 'legendary';
+  const isEpic = card?.rarity === 'epic';
   const isRare = card?.rarity === 'rare';
-  
-  const neonColor = isLegendary 
+
+  const neonColor = isLegendary
     ? '#f59e0b' // Amber/Gold
-    : isRare 
-      ? '#3b82f6' // Electric Blue
-      : '#00e5ff'; // Neon Cyan
+    : isEpic
+      ? '#d946ef' // Fuchsia
+      : isRare
+        ? '#3b82f6' // Electric Blue
+        : '#00e5ff'; // Neon Cyan
 
   useEffect(() => {
     // Play throw sound at start
@@ -59,11 +62,13 @@ export default function CardUnlockAnim({ cardId, onContinue }: CardUnlockAnimPro
     canvas.height = window.innerHeight;
 
     const particles: any[] = [];
-    const colors = isLegendary 
-      ? ['#f59e0b', '#fbbf24', '#fef08a', '#ffffff'] 
-      : isRare 
-        ? ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff']
-        : ['#00e5ff', '#22d3ee', '#67e8f9', '#ffffff'];
+    const colors = isLegendary
+      ? ['#f59e0b', '#fbbf24', '#fef08a', '#ffffff']
+      : isEpic
+        ? ['#d946ef', '#e879f9', '#f5d0fe', '#ffffff']
+        : isRare
+          ? ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff']
+          : ['#00e5ff', '#22d3ee', '#67e8f9', '#ffffff'];
 
     // Create particles
     const particleCount = 150;
@@ -175,21 +180,25 @@ export default function CardUnlockAnim({ cardId, onContinue }: CardUnlockAnimPro
           {/* Card Front (Revealed Card) */}
           <div
             className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-2xl flex flex-col overflow-hidden bg-gradient-to-b from-[#0b0f19] to-[#050811] border-2 shadow-2xl p-6 ${
-              isLegendary 
-                ? 'border-amber-500 shadow-[0_0_35px_rgba(245,158,11,0.35)]' 
-                : isRare 
-                  ? 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.3)]'
-                  : 'border-cyan-400 shadow-[0_0_25px_rgba(0,229,255,0.25)]'
+              isLegendary
+                ? 'border-amber-500 shadow-[0_0_35px_rgba(245,158,11,0.35)]'
+                : isEpic
+                  ? 'border-fuchsia-500 shadow-[0_0_32px_rgba(217,70,239,0.33)]'
+                  : isRare
+                    ? 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.3)]'
+                    : 'border-cyan-400 shadow-[0_0_25px_rgba(0,229,255,0.25)]'
             }`}
           >
             {/* Rarity & Card ID Badge */}
             <div className="flex justify-between items-center mb-4">
               <span className={`text-xs px-2.5 py-1 rounded font-black tracking-widest uppercase border ${
-                isLegendary 
-                  ? 'bg-amber-950/80 border-amber-500 text-amber-300' 
-                  : isRare 
-                    ? 'bg-blue-950/80 border-blue-500 text-blue-300'
-                    : 'bg-cyan-950/80 border-cyan-500 text-cyan-300'
+                isLegendary
+                  ? 'bg-amber-950/80 border-amber-500 text-amber-300'
+                  : isEpic
+                    ? 'bg-fuchsia-950/80 border-fuchsia-500 text-fuchsia-200'
+                    : isRare
+                      ? 'bg-blue-950/80 border-blue-500 text-blue-300'
+                      : 'bg-cyan-950/80 border-cyan-500 text-cyan-300'
               }`}>
                 {card.rarity || 'common'}
               </span>
@@ -198,11 +207,13 @@ export default function CardUnlockAnim({ cardId, onContinue }: CardUnlockAnimPro
 
             {/* Emoji Display Wrapper */}
             <div className={`w-full aspect-[4/3] rounded-xl flex items-center justify-center relative mb-4 border overflow-hidden ${
-              isLegendary 
-                ? 'bg-gradient-to-br from-amber-950/20 to-black border-amber-950' 
-                : isRare 
-                  ? 'bg-gradient-to-br from-blue-950/20 to-black border-blue-950'
-                  : 'bg-gradient-to-br from-cyan-950/20 to-black border-cyan-950'
+              isLegendary
+                ? 'bg-gradient-to-br from-amber-950/20 to-black border-amber-950'
+                : isEpic
+                  ? 'bg-gradient-to-br from-fuchsia-950/20 to-black border-fuchsia-950'
+                  : isRare
+                    ? 'bg-gradient-to-br from-blue-950/20 to-black border-blue-950'
+                    : 'bg-gradient-to-br from-cyan-950/20 to-black border-cyan-950'
             }`}>
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,var(--color-neon-blue)_0%,transparent_70%)]" />
               <span className="text-7xl md:text-8xl drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] select-none">
@@ -212,14 +223,14 @@ export default function CardUnlockAnim({ cardId, onContinue }: CardUnlockAnimPro
 
             {/* Card Name */}
             <h3 className={`text-2xl md:text-3xl font-black text-center mb-3 tracking-wide ${
-              isLegendary ? 'text-amber-400' : isRare ? 'text-blue-400' : 'text-cyan-400'
+              isLegendary ? 'text-amber-400' : isEpic ? 'text-fuchsia-300' : isRare ? 'text-blue-400' : 'text-cyan-400'
             }`}>
               {card.name}
             </h3>
 
             {/* Card Divider */}
             <div className={`h-[1px] w-full my-2 ${
-              isLegendary ? 'bg-amber-500/20' : isRare ? 'bg-blue-500/20' : 'bg-cyan-500/20'
+              isLegendary ? 'bg-amber-500/20' : isEpic ? 'bg-fuchsia-500/20' : isRare ? 'bg-blue-500/20' : 'bg-cyan-500/20'
             }`} />
 
             {/* Description (minimum 20px+ font size for classrooms) */}

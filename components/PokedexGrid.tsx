@@ -7,7 +7,73 @@ import { UNITS } from './PokedexHome';
 import { gameAudio } from '../lib/audio';
 import { Search, X, BookOpen, Lock, Sparkles, SlidersHorizontal } from 'lucide-react';
 import CardArt from './ui/CardArt';
-import { CollectibleCard } from '../types';
+import { CollectibleCard, CardRarity } from '../types';
+
+/**
+ * 카드 등급별 UI 테마 — epic 포함 4단계 정식화(F-2).
+ * 흩어져 있던 legendary/rare/else 삼항을 단일 진실 원천으로 통합한다.
+ */
+interface RarityTheme {
+  tile: string;       // 도감 타일 테두리/호버
+  tag: string;        // 작은 등급 뱃지
+  modalBorder: string;
+  modalText: string;
+  modalBadge: string;
+  modalImageBox: string;
+  modalButton: string;
+}
+
+const RARITY_THEMES: Record<CardRarity, RarityTheme> = {
+  common: {
+    tile: 'border-cyan-500/30 hover:border-cyan-400 hover:scale-[1.05] hover:shadow-[0_0_10px_rgba(0,229,255,0.2)]',
+    tag: 'text-cyan-400 border-cyan-500/20 bg-cyan-950/30',
+    modalBorder: 'border-cyan-400',
+    modalText: 'text-cyan-400',
+    modalBadge: 'bg-cyan-950/80 border-cyan-500 text-cyan-300',
+    modalImageBox: 'bg-gradient-to-br from-cyan-950/30 to-black border-cyan-950/60',
+    modalButton: 'bg-gradient-to-r from-cyan-400 to-cyan-300 hover:shadow-cyan-400/20',
+  },
+  uncommon: {
+    tile: 'border-emerald-500/30 hover:border-emerald-400 hover:scale-[1.05] hover:shadow-[0_0_10px_rgba(16,185,129,0.2)]',
+    tag: 'text-emerald-400 border-emerald-500/20 bg-emerald-950/30',
+    modalBorder: 'border-emerald-400',
+    modalText: 'text-emerald-400',
+    modalBadge: 'bg-emerald-950/80 border-emerald-500 text-emerald-300',
+    modalImageBox: 'bg-gradient-to-br from-emerald-950/30 to-black border-emerald-950/60',
+    modalButton: 'bg-gradient-to-r from-emerald-400 to-emerald-300 hover:shadow-emerald-400/20',
+  },
+  rare: {
+    tile: 'border-blue-500/40 hover:border-blue-400 hover:scale-[1.05] hover:shadow-[0_0_12px_rgba(59,130,246,0.25)]',
+    tag: 'text-blue-400 border-blue-500/20 bg-blue-950/30',
+    modalBorder: 'border-blue-500',
+    modalText: 'text-blue-400',
+    modalBadge: 'bg-blue-950/80 border-blue-500 text-blue-300',
+    modalImageBox: 'bg-gradient-to-br from-blue-950/30 to-black border-blue-950/60',
+    modalButton: 'bg-gradient-to-r from-blue-400 to-blue-300 hover:shadow-blue-400/20',
+  },
+  epic: {
+    tile: 'border-fuchsia-500/40 hover:border-fuchsia-400 hover:scale-[1.05] hover:shadow-[0_0_14px_rgba(217,70,239,0.3)]',
+    tag: 'text-fuchsia-300 border-fuchsia-500/25 bg-fuchsia-950/40',
+    modalBorder: 'border-fuchsia-500',
+    modalText: 'text-fuchsia-300',
+    modalBadge: 'bg-fuchsia-950/80 border-fuchsia-500 text-fuchsia-200',
+    modalImageBox: 'bg-gradient-to-br from-fuchsia-950/30 to-black border-fuchsia-950/60',
+    modalButton: 'bg-gradient-to-r from-fuchsia-500 to-fuchsia-400 hover:shadow-fuchsia-500/20',
+  },
+  legendary: {
+    tile: 'border-amber-500/40 hover:border-amber-400 hover:scale-[1.05] hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+    tag: 'text-amber-400 border-amber-500/20 bg-amber-950/30',
+    modalBorder: 'border-amber-500',
+    modalText: 'text-amber-400 text-gold-glow',
+    modalBadge: 'bg-amber-950/80 border-amber-500 text-amber-300',
+    modalImageBox: 'bg-gradient-to-br from-amber-950/30 to-black border-amber-950/60',
+    modalButton: 'bg-gradient-to-r from-amber-500 to-amber-400 hover:shadow-amber-500/20',
+  },
+};
+
+function rarityTheme(rarity?: CardRarity): RarityTheme {
+  return RARITY_THEMES[rarity ?? 'common'] ?? RARITY_THEMES.common;
+}
 
 interface PokedexGridProps {
   onBack: () => void;
@@ -163,8 +229,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4 select-none">
           {filteredCards.map((card) => {
             const isUnlocked = unlockedCardIds.includes(card.id);
-            const isLegendary = card.rarity === 'legendary';
-            const isRare = card.rarity === 'rare';
+            const theme = rarityTheme(card.rarity);
             const cardLevel = progress.cardLevels?.[card.id] || 1;
             const evolution = getCardEvolution(card.id, cardLevel);
 
@@ -174,11 +239,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
                 onClick={() => handleCardClick(card)}
                 className={`glass-panel aspect-[3/4.2] flex flex-col justify-between p-3 cursor-pointer group relative overflow-hidden transition-all duration-300 border ${
                   isUnlocked
-                    ? isLegendary
-                      ? 'border-amber-500/40 hover:border-amber-400 hover:scale-[1.05] hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                      : isRare
-                        ? 'border-blue-500/40 hover:border-blue-400 hover:scale-[1.05] hover:shadow-[0_0_12px_rgba(59,130,246,0.25)]'
-                        : 'border-cyan-500/30 hover:border-cyan-400 hover:scale-[1.05] hover:shadow-[0_0_10px_rgba(0,229,255,0.2)]'
+                    ? theme.tile
                     : 'border-gray-800/80 bg-gray-950/80 opacity-70 hover:opacity-100 cursor-not-allowed'
                 }`}
               >
@@ -189,13 +250,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
                     {isUnlocked && <span title={getCardAttribute(card.unitId)} className="shrink-0">{ATTRIBUTE_EMOJIS[getCardAttribute(card.unitId)]}</span>}
                   </span>
                   {isUnlocked && (
-                    <span className={`uppercase font-black px-1.5 py-0.5 rounded text-[8px] tracking-wide border ${
-                      isLegendary 
-                        ? 'text-amber-400 border-amber-500/20 bg-amber-950/30' 
-                        : isRare 
-                          ? 'text-blue-400 border-blue-500/20 bg-blue-950/30'
-                          : 'text-cyan-400 border-cyan-500/20 bg-cyan-950/30'
-                    }`}>
+                    <span className={`uppercase font-black px-1.5 py-0.5 rounded text-[8px] tracking-wide border ${theme.tag}`}>
                       {card.rarity || 'common'}
                     </span>
                   )}
@@ -243,6 +298,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
         const maxLvl = cardLevel >= 10;
         const cardAttr = getCardAttribute(selectedCard.unitId);
         const evolution = getCardEvolution(selectedCard.id, cardLevel);
+        const theme = rarityTheme(selectedCard.rarity);
 
         const advantages: Record<string, { strong: string[]; weak: string[] }> = {
           '불꽃': { strong: ['풀'], weak: ['물', '불꽃'] },
@@ -260,13 +316,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
             <div
-              className={`glass-panel w-full max-w-lg p-6 relative flex flex-col overflow-hidden bg-gradient-to-b from-[#0b0f19] to-[#04060c] border-2 shadow-[0_0_35px_rgba(0,0,0,0.8)] ${
-                selectedCard.rarity === 'legendary'
-                  ? 'border-amber-500'
-                  : selectedCard.rarity === 'rare'
-                    ? 'border-blue-500'
-                    : 'border-cyan-400'
-              }`}
+              className={`glass-panel w-full max-w-lg p-6 relative flex flex-col overflow-hidden bg-gradient-to-b from-[#0b0f19] to-[#04060c] border-2 shadow-[0_0_35px_rgba(0,0,0,0.8)] ${theme.modalBorder}`}
             >
               {/* Close Button */}
               <button
@@ -285,22 +335,10 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
                   {getUnitName(selectedCard.unitId)}
                 </span>
                 <div className="flex items-center gap-3">
-                  <h2 className={`text-2xl md:text-3xl font-black tracking-wide ${
-                    selectedCard.rarity === 'legendary'
-                      ? 'text-amber-400 text-gold-glow'
-                      : selectedCard.rarity === 'rare'
-                        ? 'text-blue-400'
-                        : 'text-cyan-400'
-                  }`}>
+                  <h2 className={`text-2xl md:text-3xl font-black tracking-wide ${theme.modalText}`}>
                     {evolution.name}
                   </h2>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-black border uppercase tracking-wider ${
-                    selectedCard.rarity === 'legendary'
-                      ? 'bg-amber-950/80 border-amber-500 text-amber-300'
-                      : selectedCard.rarity === 'rare'
-                        ? 'bg-blue-950/80 border-blue-500 text-blue-300'
-                        : 'bg-cyan-950/80 border-cyan-500 text-cyan-300'
-                  }`}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-black border uppercase tracking-wider ${theme.modalBadge}`}>
                     {selectedCard.rarity || 'common'}
                   </span>
                   <span className={`text-[10px] px-2 py-0.5 rounded font-black border uppercase tracking-wider ${ATTRIBUTE_COLORS[getCardAttribute(selectedCard.unitId)]}`}>
@@ -310,13 +348,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
               </div>
 
               {/* Larger Image Box */}
-              <div className={`w-full aspect-[4/2.8] rounded-xl flex items-center justify-center relative mb-5 border overflow-hidden ${
-                selectedCard.rarity === 'legendary'
-                  ? 'bg-gradient-to-br from-amber-950/30 to-black border-amber-950/60'
-                  : selectedCard.rarity === 'rare'
-                    ? 'bg-gradient-to-br from-blue-950/30 to-black border-blue-950/60'
-                    : 'bg-gradient-to-br from-cyan-950/30 to-black border-cyan-950/60'
-              }`}>
+              <div className={`w-full aspect-[4/2.8] rounded-xl flex items-center justify-center relative mb-5 border overflow-hidden ${theme.modalImageBox}`}>
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,var(--color-neon-blue)_0%,transparent_70%)]" />
                 <span className="text-8xl drop-shadow-[0_0_15px_rgba(255,255,255,0.25)] select-none">
                   {evolution.emoji}
@@ -377,11 +409,7 @@ export default function PokedexGrid({ onBack }: PokedexGridProps) {
                   gameAudio.playClick();
                   setSelectedCard(null);
                 }}
-                className={`w-full py-4 rounded-xl text-black font-extrabold text-lg tracking-wider uppercase transition-all transform hover:scale-[1.01] active:scale-[0.99] touch-target ${
-                  selectedCard.rarity === 'legendary'
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-400 hover:shadow-amber-500/20'
-                    : 'bg-gradient-to-r from-cyan-400 to-cyan-300 hover:shadow-cyan-400/20'
-                }`}
+                className={`w-full py-4 rounded-xl text-black font-extrabold text-lg tracking-wider uppercase transition-all transform hover:scale-[1.01] active:scale-[0.99] touch-target ${theme.modalButton}`}
               >
                 확인 (Confirm)
               </button>
