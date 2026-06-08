@@ -1,25 +1,29 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import useGameState from '../lib/game-state';
-import PokedexHome from '../components/PokedexHome';
-import PokedexGrid from '../components/PokedexGrid';
-import QuizScreen from '../components/ui/QuizScreen';
-import BossRaidScreen from '../components/ui/BossRaidScreen';
-import UnitComplete from '../components/UnitComplete';
-import { Player } from '../types';
 import RoleSelector from '../components/RoleSelector';
-import StudentLobby from '../components/StudentLobby';
-import TeacherDashboard from '../components/ui/TeacherDashboard';
-import CardBattleArena from '../components/ui/CardBattleArena';
+import { Player } from '../types';
 import { gameAudio } from '../lib/audio';
 import { Volume2, VolumeX, RotateCcw, Award, BookOpen, AlertTriangle, Users, User, Sun, Moon } from 'lucide-react';
-import { cards } from '../data/cards';
 import { supabase } from '../lib/supabase-client';
-import LegendaryAnnouncement from '../components/ui/LegendaryAnnouncement';
-import CardEvolutionOverlay, { CardEvolutionInfo } from '../components/ui/CardEvolutionOverlay';
-import MyPage from '../components/ui/MyPage';
-import Leaderboard from '../components/ui/Leaderboard';
+import type { CardEvolutionInfo } from '../components/ui/CardEvolutionOverlay';
+
+const PokedexHome = dynamic(() => import('../components/PokedexHome'), { ssr: false });
+const PokedexGrid = dynamic(() => import('../components/PokedexGrid'), { ssr: false });
+const QuizScreen = dynamic(() => import('../components/ui/QuizScreen'), { ssr: false });
+const BossRaidScreen = dynamic(() => import('../components/ui/BossRaidScreen'), { ssr: false });
+const UnitComplete = dynamic(() => import('../components/UnitComplete'), { ssr: false });
+const StudentLobby = dynamic(() => import('../components/StudentLobby'), { ssr: false });
+const TeacherDashboard = dynamic(() => import('../components/ui/TeacherDashboard'), { ssr: false });
+const CardBattleArena = dynamic(() => import('../components/ui/CardBattleArena'), { ssr: false });
+const LegendaryAnnouncement = dynamic(() => import('../components/ui/LegendaryAnnouncement'), { ssr: false });
+const CardEvolutionOverlay = dynamic(() => import('../components/ui/CardEvolutionOverlay'), { ssr: false });
+const MyPage = dynamic(() => import('../components/ui/MyPage'), { ssr: false });
+const Leaderboard = dynamic(() => import('../components/ui/Leaderboard'), { ssr: false });
+
+const TOTAL_CARDS = 80;
 
 export default function Home() {
   const { 
@@ -138,7 +142,7 @@ export default function Home() {
   }, []);
 
   // Global calculations
-  const totalCards = cards.length;
+  const totalCards = TOTAL_CARDS;
   const unlockedCount = unlockedCardIds.length;
   const completionPercentage = Math.round((unlockedCount / totalCards) * 100);
 
