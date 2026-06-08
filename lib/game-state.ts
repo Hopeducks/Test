@@ -84,6 +84,9 @@ const DEFAULT_PROGRESS: GameProgress = {
   },
 };
 
+/** 카드 진화 단계 경계 레벨 — getCardEvolution / gainCardXp 단일 진실 원천. */
+const EVOLUTION_LEVELS = { stage2: 4, stage3: 8 } as const;
+
 class GameStateManager {
   private state: GameState = {
     progress: {
@@ -1129,18 +1132,18 @@ class GameStateManager {
 
     const allSkills = attributeSkills[attribute] || attributeSkills['노말'];
     const activeSkills = [allSkills[0]];
-    if (level >= 4) activeSkills.push(allSkills[1]);
-    if (level >= 8) activeSkills.push(allSkills[2]);
+    if (level >= EVOLUTION_LEVELS.stage2) activeSkills.push(allSkills[1]);
+    if (level >= EVOLUTION_LEVELS.stage3) activeSkills.push(allSkills[2]);
 
     let evolvedName = card.name;
     let evolvedEmoji = card.image || card.emoji || '❓';
     let stage = 1;
 
-    if (level >= 8) {
+    if (level >= EVOLUTION_LEVELS.stage3) {
       evolvedName = `초강력 ${card.name}`;
       evolvedEmoji = `👑${card.image || card.emoji || '❓'}`;
       stage = 3;
-    } else if (level >= 4) {
+    } else if (level >= EVOLUTION_LEVELS.stage2) {
       evolvedName = `진화한 ${card.name}`;
       evolvedEmoji = `${card.image || card.emoji || '❓'}✨`;
       stage = 2;
@@ -1162,6 +1165,8 @@ class GameStateManager {
 
     let hasLevelUp = false;
     const levelUpCards: string[] = [];
+    // 진화 단계 교차 카드 — getCardEvolution의 stage 경계(레벨 4=2단계, 8=3단계)와 일치.
+    const evolvedCards: { cardId: string; newLevel: number }[] = [];
 
     cardIds.forEach(cardId => {
       if (!progress.unlockedCardIds.includes(cardId)) return;
@@ -1173,10 +1178,14 @@ class GameStateManager {
 
       const nextXp = currentXp + amount;
       if (nextXp >= 100) {
-        progress.cardLevels![cardId] = currentLevel + 1;
+        const newLevel = currentLevel + 1;
+        progress.cardLevels![cardId] = newLevel;
         progress.cardXps![cardId] = nextXp - 100;
         hasLevelUp = true;
         levelUpCards.push(cardId);
+        if (newLevel === EVOLUTION_LEVELS.stage2 || newLevel === EVOLUTION_LEVELS.stage3) {
+          evolvedCards.push({ cardId, newLevel });
+        }
       } else {
         progress.cardXps![cardId] = nextXp;
       }
@@ -1192,6 +1201,16 @@ class GameStateManager {
         if (matchingCard) {
           window.dispatchEvent(new CustomEvent('react:cardLevelUp', { detail: { cardId: cId, name: matchingCard.name } }));
         }
+      });
+    }
+
+    // 진화 연출(D-2): 레벨업이 진화 단계를 넘으면 전역 진화 오버레이를 띄운다.
+    if (evolvedCards.length > 0 && typeof window !== 'undefined') {
+      evolvedCards.forEach(({ cardId, newLevel }) => {
+        const evo = this.getCardEvolution(cardId, newLevel);
+        window.dispatchEvent(new CustomEvent('react:cardEvolved', {
+          detail: { cardId, name: evo.name, emoji: evo.emoji, stage: evo.stage }
+        }));
       });
     }
   }

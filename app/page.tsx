@@ -17,6 +17,7 @@ import { Volume2, VolumeX, RotateCcw, Award, BookOpen, AlertTriangle, Users, Use
 import { cards } from '../data/cards';
 import { supabase } from '../lib/supabase-client';
 import LegendaryAnnouncement from '../components/ui/LegendaryAnnouncement';
+import CardEvolutionOverlay, { CardEvolutionInfo } from '../components/ui/CardEvolutionOverlay';
 import MyPage from '../components/ui/MyPage';
 import Leaderboard from '../components/ui/Leaderboard';
 
@@ -121,6 +122,19 @@ export default function Home() {
     };
     window.addEventListener('react:achievementUnlocked', handleAchievement);
     return () => window.removeEventListener('react:achievementUnlocked', handleAchievement);
+  }, []);
+
+  // 카드 진화 연출 (전역, D-2) — react:cardEvolved 수신, 순차 표시 큐
+  const [evolutionQueue, setEvolutionQueue] = useState<CardEvolutionInfo[]>([]);
+
+  useEffect(() => {
+    const handleEvolved = (e: Event) => {
+      const detail = (e as CustomEvent<CardEvolutionInfo>).detail;
+      if (!detail) return;
+      setEvolutionQueue(prev => [...prev, detail]);
+    };
+    window.addEventListener('react:cardEvolved', handleEvolved);
+    return () => window.removeEventListener('react:cardEvolved', handleEvolved);
   }, []);
 
   // Global calculations
@@ -535,6 +549,15 @@ export default function Home() {
           cardName={legendaryAnnounce.cardName}
           cardEmoji={legendaryAnnounce.cardEmoji}
           onClose={() => setLegendaryAnnounce(null)}
+        />
+      )}
+
+      {/* Card Evolution Overlay (전역, D-2) — 큐의 첫 항목만 표시, 닫히면 shift */}
+      {evolutionQueue.length > 0 && (
+        <CardEvolutionOverlay
+          key={`${evolutionQueue[0].cardId}-${evolutionQueue[0].stage}`}
+          evolution={evolutionQueue[0]}
+          onClose={() => setEvolutionQueue(prev => prev.slice(1))}
         />
       )}
     </main>
