@@ -1,11 +1,12 @@
 import { ACHIEVEMENTS_LIST } from '../data/achievements';
 import {
   GameProgress,
+  DailyStats,
   StudentResponse,
   ClassroomSession,
   Player,
-  CostumeId, 
-  CostumeItem, 
+  CostumeId,
+  CostumeItem,
   Achievement,
   EmoteId,
   ItemInventory
@@ -661,6 +662,7 @@ class GameStateManager {
     if (!progress.unlockedCardIds.includes(cardId)) {
       progress.unlockedCardIds = [...progress.unlockedCardIds, cardId];
       // 카드 해금의 보상은 카드 그 자체. 코인은 지급하지 않는다. (PRD EPIC A)
+      this.incrementDailyStat('cardsUnlocked');
       this.save();
       // 카드 수집/레벨 업적 평가 (보상 지급 중 재귀 방지)
       if (!this.isGrantingReward) {
@@ -700,6 +702,7 @@ class GameStateManager {
     }
 
     this.checkMilestones(unitId, score);
+    this.incrementDailyStat('quizCompleted');
     this.save();
 
     // 업적 평가: 단원 완료 / 카드 수집 / 트레이너 레벨
@@ -814,6 +817,52 @@ class GameStateManager {
     if (!progress.claimedQuestIds.includes(questId)) {
       progress.claimedQuestIds = [...progress.claimedQuestIds, questId];
       this.awardCoins(coinReward, 'quest_reward');
+    }
+  }
+
+  /** 오늘 날짜 문자열 반환 (YYYY-MM-DD). */
+  private todayStr(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /** 일일 통계를 읽어온다. 날짜가 바뀌었으면 초기화하고 claimedDailyQuestIds도 리셋. */
+  getDailyStats(): DailyStats {
+    this.ensureInitialized();
+    const progress = this.state.progress;
+    const today = this.todayStr();
+    if (!progress.dailyStats || progress.dailyStats.date !== today) {
+      progress.dailyStats = { date: today, quizCompleted: 0, battlesPlayed: 0, cardsUnlocked: 0, lobbyVisited: false };
+      progress.claimedDailyQuestIds = [];
+      this.save();
+    }
+    return progress.dailyStats;
+  }
+
+  /** 일일 숫자형 통계 1 증가. */
+  incrementDailyStat(key: 'quizCompleted' | 'battlesPlayed' | 'cardsUnlocked') {
+    const stats = this.getDailyStats();
+    this.state.progress.dailyStats = { ...stats, [key]: stats[key] + 1 };
+  }
+
+  /** 로비 입장 기록. */
+  markLobbyVisited() {
+    const stats = this.getDailyStats();
+    if (!stats.lobbyVisited) {
+      this.state.progress.dailyStats = { ...stats, lobbyVisited: true };
+      this.save();
+    }
+  }
+
+  /** 일일 퀘스트 보상 수령. 하루 1회만 가능하며 coins는 A-3 상한 내 소액. */
+  claimDailyQuestReward(questId: string, coinReward: number) {
+    this.ensureInitialized();
+    const progress = this.state.progress;
+    this.getDailyStats(); // 날짜 리셋 보장
+    if (!progress.claimedDailyQuestIds) progress.claimedDailyQuestIds = [];
+    if (!progress.claimedDailyQuestIds.includes(questId)) {
+      progress.claimedDailyQuestIds = [...progress.claimedDailyQuestIds, questId];
+      this.awardCoins(coinReward, 'daily_quest');
+      this.save();
     }
   }
 
@@ -1350,6 +1399,10 @@ export function useGameState() {
     gainItem: (type: keyof ItemInventory, amount: number) => gameStateManager.gainItem(type, amount),
     purchaseItem: (type: keyof ItemInventory, cost: number, amount: number) => gameStateManager.purchaseItem(type, cost, amount),
     claimQuestReward: (questId: string, coinReward: number) => gameStateManager.claimQuestReward(questId, coinReward),
+    claimDailyQuestReward: (questId: string, coinReward: number) => gameStateManager.claimDailyQuestReward(questId, coinReward),
+    getDailyStats: () => gameStateManager.getDailyStats(),
+    markLobbyVisited: () => gameStateManager.markLobbyVisited(),
+    incrementDailyStat: (key: 'quizCompleted' | 'battlesPlayed' | 'cardsUnlocked') => gameStateManager.incrementDailyStat(key),
     getCoins: () => gameStateManager.getCoins(),
     awardCoins: (amount: number, source?: CoinSource) => gameStateManager.awardCoins(amount, source),
     spendCoins: (amount: number) => gameStateManager.spendCoins(amount),

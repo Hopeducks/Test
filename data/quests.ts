@@ -9,7 +9,7 @@
  *  - 컴포넌트는 이 모듈의 `buildActiveQuests`만 호출(하드코딩 분리).
  */
 
-import { GameProgress } from '../types';
+import { GameProgress, DailyStats } from '../types';
 import { cards } from './cards';
 
 export interface QuestTier {
@@ -320,6 +320,113 @@ export const QUEST_CATEGORIES: QuestCategoryDef[] = [
 
 /** 전체 정의된 도전과제 수(티어 합). */
 export const TOTAL_QUEST_COUNT = QUEST_CATEGORIES.reduce((sum, c) => sum + c.tiers.length, 0);
+
+// ── 일일 도전과제 ──────────────────────────────────────
+
+export interface DailyQuest {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  goalKey: keyof Omit<DailyStats, 'date'>;
+  goal: number;
+  reward: number;
+}
+
+/** 날짜 시드 기반 단순 해시 (YYYY-MM-DD → 정수). 순수 함수. */
+export function dateSeed(dateStr: string): number {
+  let h = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    h = (Math.imul(31, h) + dateStr.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+export const DAILY_QUEST_POOL: DailyQuest[] = [
+  { id: 'dq_quiz1', name: '오늘의 탐구자',    desc: '퀴즈 단원 1개 완료하기',    icon: '📝', goalKey: 'quizCompleted', goal: 1,  reward: 20 },
+  { id: 'dq_quiz2', name: '집중 학습',         desc: '퀴즈 단원 2개 완료하기',    icon: '📖', goalKey: 'quizCompleted', goal: 2,  reward: 40 },
+  { id: 'dq_quiz3', name: '오늘의 과학자',     desc: '퀴즈 단원 3개 완료하기',    icon: '🔬', goalKey: 'quizCompleted', goal: 3,  reward: 70 },
+  { id: 'dq_battle1', name: '전투 입문',        desc: '배틀 또는 레이드 1회 참가', icon: '⚔️', goalKey: 'battlesPlayed', goal: 1,  reward: 20 },
+  { id: 'dq_battle3', name: '전투의 달인',      desc: '배틀 또는 레이드 3회 참가', icon: '🏆', goalKey: 'battlesPlayed', goal: 3,  reward: 50 },
+  { id: 'dq_card1', name: '카드 수집가',        desc: '오늘 카드 1장 해금하기',    icon: '🃏', goalKey: 'cardsUnlocked', goal: 1,  reward: 25 },
+  { id: 'dq_card3', name: '열혈 수집가',        desc: '오늘 카드 3장 해금하기',    icon: '🎴', goalKey: 'cardsUnlocked', goal: 3,  reward: 55 },
+  { id: 'dq_lobby', name: '메타버스 탐험',      desc: '오늘 로비에 입장하기',      icon: '🌐', goalKey: 'lobbyVisited', goal: 1,  reward: 15 },
+  { id: 'dq_active', name: '활발한 하루',       desc: '퀴즈 1개 + 배틀 1회 참가',  icon: '⭐', goalKey: 'quizCompleted', goal: 1,  reward: 30 },
+  { id: 'dq_hard',  name: '오늘의 챔피언',      desc: '퀴즈 2개 + 배틀 2회 참가',  icon: '👑', goalKey: 'battlesPlayed', goal: 2,  reward: 60 },
+  { id: 'dq_card5', name: '도감 마스터',        desc: '오늘 카드 5장 해금하기',    icon: '📔', goalKey: 'cardsUnlocked', goal: 5,  reward: 80 },
+  { id: 'dq_quiz4', name: '슈퍼 학습자',        desc: '퀴즈 단원 4개 완료하기',    icon: '🚀', goalKey: 'quizCompleted', goal: 4,  reward: 90 },
+];
+
+/**
+ * 날짜 문자열(YYYY-MM-DD)을 받아 오늘의 일일 도전과제 3개를 반환한다.
+ * 같은 날짜는 항상 같은 3개를 반환 (결정론적).
+ */
+export function getDailyQuests(dateStr: string): DailyQuest[] {
+  const seed = dateSeed(dateStr);
+  const n = DAILY_QUEST_POOL.length;
+  const i0 = seed % n;
+  const i1 = (seed * 7 + 3) % n;
+  const i2 = (seed * 13 + 5) % n;
+  const indices = [...new Set([i0, i1, i2])];
+  while (indices.length < 3) {
+    indices.push((indices[indices.length - 1] + 1) % n);
+  }
+  return indices.slice(0, 3).map(i => DAILY_QUEST_POOL[i]);
+}
+
+export interface DailyQuestStatus {
+  quest: DailyQuest;
+  prog: number;
+  isClaimed: boolean;
+  isReady: boolean;
+  /** 복합 조건(active/hard) 퀘스트 보조 진행도 */
+  extraProg?: number;
+  extraGoal?: number;
+}
+
+/** 오늘의 일일 퀘스트 상태 배열 (UI 렌더용). */
+export function buildDailyQuestStatus(
+  dateStr: string,
+  dailyStats: DailyStats | undefined,
+  claimedDailyQuestIds: string[]
+): DailyQuestStatus[] {
+  const quests = getDailyQuests(dateStr);
+  const stats: DailyStats = dailyStats && dailyStats.date === dateStr
+    ? dailyStats
+    : { date: dateStr, quizCompleted: 0, battlesPlayed: 0, cardsUnlocked: 0, lobbyVisited: false };
+  const claimed = new Set(claimedDailyQuestIds);
+
+  return quests.map(q => {
+    const rawProg = q.goalKey === 'lobbyVisited'
+      ? (stats.lobbyVisited ? 1 : 0)
+      : (stats[q.goalKey] as number);
+
+    let prog = rawProg;
+    let extraProg: number | undefined;
+    let extraGoal: number | undefined;
+
+    // dq_active: 퀴즈 1 AND 배틀 1
+    if (q.id === 'dq_active') {
+      prog = Math.min(stats.quizCompleted, 1);
+      extraProg = Math.min(stats.battlesPlayed, 1);
+      extraGoal = 1;
+    }
+    // dq_hard: 퀴즈 2 AND 배틀 2
+    if (q.id === 'dq_hard') {
+      prog = Math.min(stats.quizCompleted, 2);
+      extraProg = Math.min(stats.battlesPlayed, 2);
+      extraGoal = 2;
+    }
+
+    const isReady = q.id === 'dq_active'
+      ? stats.quizCompleted >= 1 && stats.battlesPlayed >= 1 && !claimed.has(q.id)
+      : q.id === 'dq_hard'
+      ? stats.quizCompleted >= 2 && stats.battlesPlayed >= 2 && !claimed.has(q.id)
+      : prog >= q.goal && !claimed.has(q.id);
+
+    return { quest: q, prog, isClaimed: claimed.has(q.id), isReady, extraProg, extraGoal };
+  });
+}
 
 /**
  * 카테고리별 현재 활성 티어를 계산한다.

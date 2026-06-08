@@ -73,6 +73,9 @@ export default function StudentLobby({
     calculateCP,
     purchaseItem,
     claimQuestReward,
+    claimDailyQuestReward,
+    getDailyStats,
+    markLobbyVisited,
     getTrainerInfo
   } = useGameState();
   const [isSimulatedLobby, setIsSimulatedLobby] = useState(false);
@@ -105,6 +108,12 @@ export default function StudentLobby({
 
   // Position of current player (tile grid coordinates)
   const [playerPos, setPlayerPos] = useState({ x: 60, y: 48 }); // Spawn in center square by default
+
+  // 로비 입장 시 일일 통계 기록
+  useEffect(() => {
+    markLobbyVisited();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync state with local storage player config
   useEffect(() => {
@@ -779,6 +788,7 @@ export default function StudentLobby({
                   progress={progress}
                   getTrainerInfo={getTrainerInfo}
                   onClaimQuest={claimQuestReward}
+                  onClaimDailyQuest={claimDailyQuestReward}
                 />
               )}
             </div>

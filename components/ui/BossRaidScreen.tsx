@@ -31,7 +31,7 @@ interface Contribution {
 }
 
 export default function BossRaidScreen({ sessionCode, player, onRaidComplete, onCancel }: BossRaidScreenProps) {
-  const { unlockCard, gainItem, gainCardXp, equippedCosmetics, progress, triggerAchievementEvent } = useGameState();
+  const { unlockCard, gainItem, gainCardXp, equippedCosmetics, progress, triggerAchievementEvent, incrementDailyStat } = useGameState();
 
   const partnerCard = useMemo(() => {
     const petId = equippedCosmetics.petId;
@@ -337,6 +337,7 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
     if (progress.unlockedCardIds.length > 0) {
       gainCardXp(progress.unlockedCardIds, xpGain);
     }
+    incrementDailyStat('battlesPlayed');
   };
 
   // Boss Phase & Color Logic

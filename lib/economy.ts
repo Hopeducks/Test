@@ -16,6 +16,7 @@ export type CoinSource =
   | 'new_high_score'     // 단원 신기록 갱신 보너스
   | 'gym_first_clear'    // 체육관 관장 최초 격파
   | 'quest_reward'       // 퀘스트 티어 수령
+  | 'daily_quest'        // 일일 도전과제 수령
   | 'achievement_reward' // 업적 최초 달성
   | 'migration';         // 레거시 데이터 1회 보정
 

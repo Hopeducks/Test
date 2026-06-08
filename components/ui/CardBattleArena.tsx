@@ -28,7 +28,8 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     getLocalPlayer,
     setLocalPlayer,
     gainCardXp,
-    useItem
+    useItem,
+    incrementDailyStat,
   } = useGameState();
 
   // Sum stats of equipped items
@@ -576,6 +577,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     if (deckCardIds.length > 0) {
       gainCardXp(deckCardIds, xpGain);
     }
+    incrementDailyStat('battlesPlayed');
 
     // Write battle results to Supabase game_sessions list
     try {

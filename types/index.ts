@@ -260,12 +260,22 @@ export interface ItemInventory {
   revive?: number
 }
 
+export interface DailyStats {
+  date: string;            // YYYY-MM-DD
+  quizCompleted: number;   // 오늘 완료한 퀴즈 단원 수
+  battlesPlayed: number;   // 오늘 배틀/레이드 참가 수
+  cardsUnlocked: number;   // 오늘 해금한 카드 수
+  lobbyVisited: boolean;   // 오늘 로비 입장 여부
+}
+
 export interface GameProgress {
   unlockedCardIds: string[]
   completedUnits: number[]        // 완료한 단원 ID 목록 (1~8)
   unitHighScores: Record<number, number> // 단원별 최고 퀴즈 점수 (0 ~ 100)
   coins?: number                  // 현재 잔여 코인
   claimedQuestIds?: string[]      // 이미 수령 완료한 퀘스트 ID 목록
+  claimedDailyQuestIds?: string[] // 오늘 수령한 일일 퀘스트 ID 목록
+  dailyStats?: DailyStats         // 오늘의 활동 통계 (매일 리셋)
   items?: ItemInventory
   cardLevels?: Record<string, number>
   cardXps?: Record<string, number>
