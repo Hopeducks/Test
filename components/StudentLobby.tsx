@@ -5,11 +5,12 @@ import { gameAudio } from '../lib/audio';
 import { ClassroomSession, Player, EmoteId } from '../types';
 import { User, Users, Loader2, ArrowLeft, Shirt, Swords, BookOpen, Orbit, Trophy, ShoppingBag, Coins, Sparkles, Award } from 'lucide-react';
 import { RenderAvatarPreview } from './ui/AvatarPreview';
-import { 
-  getUnitTitle, 
+import {
+  getUnitTitle,
   getUnitIcon,
   SIMULATED_CLASSMATES
 } from '../data/questions';
+import { simulatedBotCp } from '../lib/progression';
 import useGameState from '../lib/game-state';
 import dynamic from 'next/dynamic';
 import { supabase } from '../lib/supabase-client';
@@ -302,7 +303,7 @@ export default function StudentLobby({
               x: Math.floor(Math.random() * (GRID_COLS - 4)) + 2,
               y: Math.floor(Math.random() * (GRID_ROWS - 4)) + 2,
               equippedCosmetics: { outfit: 'none', expression: 'none', accessory: 'none', mount: 'none' },
-              cp: Math.floor((Math.sin(simSpawnIndex) * 150) + 500)
+              cp: simulatedBotCp(nextSim.accuracyFactor, nextSim.speedFactor)
             }
           ]);
           

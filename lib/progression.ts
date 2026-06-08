@@ -129,3 +129,35 @@ export function deriveCp(input: {
     (input.setBonus ?? 0)
   );
 }
+
+/** 시뮬레이션 봇 CP 산식의 기준값(랭킹 표시 결정화 — D10). */
+export const SIMULATED_BOT_CP = {
+  base: 420,
+  accuracyWeight: 520, // 정답률 가중(0~1 → 0~520)
+  speedWeight: 60,     // 속도 가중(빠를수록 가산)
+} as const;
+
+/**
+ * 시뮬레이션 봇의 CP를 정답률·속도에서 **결정론적으로** 파생한다 (D10).
+ *
+ * 기존 `Math.sin(index)*150+500`은 의미 없는 인덱스 기반이었다. 봇의 실력 지표
+ * (accuracyFactor/speedFactor)에 연결해 같은 봇은 항상 같은 CP를 갖게 한다.
+ * 반환값은 항상 정수이며 NaN/음수가 없다.
+ */
+export function simulatedBotCp(accuracyFactor: number, speedFactor: number): number {
+  const acc = Number.isFinite(accuracyFactor) ? clamp01(accuracyFactor) : 0;
+  // speedFactor는 "정답까지 걸린 시간 계수"로 작을수록 빠름 → (1 - 정규화)로 가산.
+  const spd = Number.isFinite(speedFactor) ? clamp01(speedFactor) : 0.5;
+  const cp =
+    SIMULATED_BOT_CP.base +
+    acc * SIMULATED_BOT_CP.accuracyWeight +
+    (1 - Math.min(spd, 1)) * SIMULATED_BOT_CP.speedWeight;
+  return Math.max(0, Math.round(cp));
+}
+
+/** 0~1 범위 클램프(외부 의존 없는 작은 헬퍼). */
+function clamp01(v: number): number {
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}

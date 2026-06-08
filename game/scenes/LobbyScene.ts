@@ -3,16 +3,33 @@ import { AvatarConfig, EmoteId } from '../../types';
 import { cards } from '../../data/cards';
 import { costumeCatalog } from '../../data/costume-catalog';
 import { ITEM_EMOJIS } from '../../components/ui/avatar/avatar-constants';
+import { ensureZoneTextures, ensureUnitFloorTexture, ZoneTextureKey } from './lobby/zone-textures';
+import {
+  prefersReducedMotion,
+  deriveRarityAura,
+  ensureSoftCircleTexture,
+} from './lobby/lobby-visuals';
+import { createLobbyDecorations } from './lobby/decorations';
 
 const TILE_SIZE = 32;
 const MAP_WIDTH = 120;
 const MAP_HEIGHT = 90;
+
+// 렌더 깊이 레이어 — 바닥(가장 아래)부터 캐릭터·연출 순으로 쌓는다.
+const DEPTH_FLOOR = -30;       // 기본 타일맵 바닥
+const DEPTH_ZONE_FLOOR = -25;  // 존별 테마 바닥 tileSprite
+const DEPTH_ZONE_GFX = -20;    // 존 외곽선·라벨
+const DEPTH_DECOR = -15;       // 장식 오브젝트(바닥 부착)
+const DEPTH_BG_PARTICLE = -12; // 배경 부유 파티클(캐릭터 뒤)
+const DEPTH_WALL = -8;         // 벽/장애물
+const DEPTH_OVERLAY = 1000;    // 비네팅·포탈 줌 연출(최상단)
 
 // Extend PlayerContainer to include target coordinates for lerp movement
 class RemotePlayerContainer extends Phaser.GameObjects.Container {
   public targetX: number;
   public targetY: number;
   private nickname: string;
+  private bodyGroup: Phaser.GameObjects.Container;
   private bodyCircle: Phaser.GameObjects.Arc;
   private vehicleText: Phaser.GameObjects.Text;
   private outfitText: Phaser.GameObjects.Text;
@@ -25,6 +42,14 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
   private emoteBg: Phaser.GameObjects.Graphics;
   private emoteTimer: Phaser.Time.TimerEvent | null = null;
 
+  // 캐릭터 디테일(E-2): 그림자·등급 오라·걷기 애니
+  private shadow: Phaser.GameObjects.Image;
+  private aura: Phaser.GameObjects.Image;
+  private auraTween: Phaser.Tweens.Tween | null = null;
+  private reducedMotion: boolean;
+  private facing: number = 1;
+  private walkPhase: number = 0;
+
   // Pet movement interpolation tracking members
   private lastX: number | undefined;
   private lastY: number | undefined;
@@ -33,29 +58,52 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
   private petCurrentX: number = 22;
   private petCurrentY: number = -12;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, nickname: string, avatar: AvatarConfig) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    nickname: string,
+    avatar: AvatarConfig,
+    reducedMotion: boolean = false
+  ) {
     super(scene, x, y);
     this.targetX = x;
     this.targetY = y;
     this.nickname = nickname;
+    this.reducedMotion = reducedMotion;
+
+    // 0. 바닥 그림자(가장 아래) — 부드러운 타원
+    this.shadow = scene.add.image(0, 17, 'soft-shadow').setOrigin(0.5);
+    this.shadow.setDisplaySize(30, 12);
+    this.add(this.shadow);
+
+    // 0.5. 등급 오라(몸체 뒤) — epic 이상에서만 표시
+    this.aura = scene.add.image(0, 0, 'soft-glow').setOrigin(0.5);
+    this.aura.setVisible(false);
+    this.aura.setBlendMode(Phaser.BlendModes.ADD);
+    this.add(this.aura);
+
+    // 몸체 비주얼은 하나의 그룹으로 묶어 걷기 bob/squash/flip을 적용한다.
+    this.bodyGroup = scene.add.container(0, 0);
+    this.add(this.bodyGroup);
 
     // 1. Vehicle (underneath character)
     this.vehicleText = scene.add.text(0, 10, '', { fontSize: '24px' }).setOrigin(0.5);
-    this.add(this.vehicleText);
+    this.bodyGroup.add(this.vehicleText);
 
     // 2. Body Circle
     const bodyColor = Phaser.Display.Color.HexStringToColor(avatar.bodyColor || '#4f46e5').color;
     this.bodyCircle = scene.add.arc(0, 0, 16, 0, 360, false, bodyColor);
     this.bodyCircle.setStrokeStyle(2, 0xffffff);
-    this.add(this.bodyCircle);
+    this.bodyGroup.add(this.bodyCircle);
 
     // 3. Outfit
     this.outfitText = scene.add.text(0, 2, '', { fontSize: '18px' }).setOrigin(0.5);
-    this.add(this.outfitText);
+    this.bodyGroup.add(this.outfitText);
 
     // 4. Hat
     this.hatText = scene.add.text(0, -18, '', { fontSize: '18px' }).setOrigin(0.5);
-    this.add(this.hatText);
+    this.bodyGroup.add(this.hatText);
 
     // 4.5. Pet
     this.petText = scene.add.text(22, -12, '', { fontSize: '18px' }).setOrigin(0.5);
@@ -111,6 +159,31 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
     this.lastX = this.x;
     this.lastY = this.y;
 
+    const isMoving = Math.abs(dx) > 0.3 || Math.abs(dy) > 0.3;
+
+    // 방향 반전(좌우) — 수평 이동이 있을 때만 갱신
+    if (dx > 0.3) this.facing = 1;
+    else if (dx < -0.3) this.facing = -1;
+
+    // 걷기 애니: 상하 bob + 스쿼시(compositor 친화 scale/translate만). 그림자는 고정.
+    if (this.reducedMotion) {
+      this.bodyGroup.setScale(this.facing, 1);
+      this.bodyGroup.y = 0;
+    } else if (isMoving) {
+      this.walkPhase += delta * 0.018;
+      const bob = Math.abs(Math.sin(this.walkPhase));
+      this.bodyGroup.y = -bob * 3;
+      this.bodyGroup.setScale(this.facing * (1 + bob * 0.05), 1 - bob * 0.07);
+      this.shadow.setScale(1 - bob * 0.12, 1);
+      this.shadow.setAlpha(0.9 - bob * 0.2);
+    } else {
+      // Idle 부유
+      this.bodyGroup.y = Math.sin(time * 0.004) * 1.5;
+      this.bodyGroup.setScale(this.facing, 1);
+      this.shadow.setScale(1, 1);
+      this.shadow.setAlpha(0.85);
+    }
+
     if (dx !== 0 || dy !== 0) {
       if (dx > 0) {
         this.petTargetX = -24;
@@ -131,7 +204,7 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
     // Linear Interpolation for pet coordinates
     this.petCurrentX = Phaser.Math.Linear(this.petCurrentX, this.petTargetX, 0.1);
     this.petCurrentY = Phaser.Math.Linear(this.petCurrentY, this.petTargetY, 0.1);
-    
+
     this.petText.setPosition(this.petCurrentX, this.petCurrentY + hoverOffset);
   }
 
@@ -173,6 +246,51 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
       }
     }
     this.petText.setText(petEmoji);
+
+    this.applyRarityAura(avatar);
+  }
+
+  /** 장착 코스튬 최고 등급(epic↑)일 때 몸체 뒤 오라를 켠다 (E-2). */
+  private applyRarityAura(avatar: AvatarConfig): void {
+    const aura = deriveRarityAura([
+      avatar.outfit,
+      avatar.hat,
+      avatar.accessory,
+      avatar.vehicle,
+      avatar.title,
+      avatar.badge,
+    ]);
+
+    if (this.auraTween) {
+      this.auraTween.stop();
+      this.auraTween = null;
+    }
+
+    if (!aura.show) {
+      this.aura.setVisible(false);
+      return;
+    }
+
+    this.aura.setVisible(true);
+    this.aura.setTint(aura.color);
+    this.aura.setDisplaySize(52, 52);
+
+    if (this.reducedMotion) {
+      this.aura.setAlpha(0.4);
+      this.aura.setScale(this.aura.scaleX, this.aura.scaleY);
+      return;
+    }
+
+    this.aura.setAlpha(0.55);
+    this.auraTween = this.scene.tweens.add({
+      targets: this.aura,
+      scale: { from: this.aura.scaleX, to: this.aura.scaleX * 1.25 },
+      alpha: { from: 0.55, to: 0.2 },
+      yoyo: true,
+      repeat: -1,
+      duration: 900,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   public showEmote(emote: EmoteId): void {
@@ -215,6 +333,19 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
       this.emoteBubble.setVisible(false);
     });
   }
+
+  public destroy(fromScene?: boolean): void {
+    // 누수 방지: 오라 트윈·이모트 타이머 정리 후 컨테이너 파괴 (E-4)
+    if (this.auraTween) {
+      this.auraTween.stop();
+      this.auraTween = null;
+    }
+    if (this.emoteTimer) {
+      this.emoteTimer.destroy();
+      this.emoteTimer = null;
+    }
+    super.destroy(fromScene);
+  }
 }
 
 interface Portal {
@@ -223,6 +354,7 @@ interface Portal {
   y: number;
   radius: number;
   unitId?: number;
+  color?: number;
 }
 
 interface NpcData {
@@ -285,6 +417,15 @@ export default class LobbyScene extends Phaser.Scene {
   private npcs: Array<{ container: Phaser.GameObjects.Container; initialX: number; initialY: number; name: string }> = [];
   private emoteClearTimer: Phaser.Time.TimerEvent | null = null;
   private moveParticles: any = null; // Spark particle trail emitter
+  private reducedMotion: boolean = false;
+  private bgParticles: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private vignette: Phaser.GameObjects.Image | null = null;
+  private isTransitioning: boolean = false;
+  private decorTweens: Phaser.Tweens.Tween[] = [];
+  private minimap: Phaser.GameObjects.Container | null = null;
+  private minimapDot: Phaser.GameObjects.Arc | null = null;
+  private minimapScale: number = 0;
+  private minimapOrigin = { x: 0, y: 0 };
 
   constructor() {
     super({ key: 'LobbyScene' });
@@ -325,6 +466,15 @@ export default class LobbyScene extends Phaser.Scene {
   }
 
   public create(): void {
+    this.reducedMotion = prefersReducedMotion();
+    this.isTransitioning = false;
+
+    // 존별 테마 바닥 + 보조 텍스처(그림자/오라/먼지) 생성 (E-1/E-2)
+    ensureZoneTextures(this);
+    ensureSoftCircleTexture(this, 'soft-shadow', 32, 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0)');
+    ensureSoftCircleTexture(this, 'soft-glow', 48, 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
+    ensureSoftCircleTexture(this, 'dust', 12, 'rgba(180,220,255,0.8)', 'rgba(180,220,255,0)');
+
     // 1. Draw dynamic tileset
     const canvas = this.textures.createCanvas('lobby-tiles', TILE_SIZE * 4, TILE_SIZE);
     if (canvas) {
@@ -405,6 +555,9 @@ export default class LobbyScene extends Phaser.Scene {
       const floorLayer = map.createBlankLayer('Floor', tileset);
       const wallLayer = map.createBlankLayer('Walls', tileset);
 
+      floorLayer?.setDepth(DEPTH_FLOOR);
+      wallLayer?.setDepth(DEPTH_WALL);
+
       // Default fill floor
       floorLayer?.fill(1);
 
@@ -439,12 +592,27 @@ export default class LobbyScene extends Phaser.Scene {
 
       // 3. Draw Zone Rectangles
       const zoneGraphics = this.add.graphics();
-      
-      const drawZone = (name: string, tx: number, ty: number, tw: number, th: number, color: number) => {
+      zoneGraphics.setDepth(DEPTH_ZONE_GFX);
+
+      const drawZone = (
+        name: string,
+        tx: number,
+        ty: number,
+        tw: number,
+        th: number,
+        color: number,
+        themeKey?: ZoneTextureKey
+      ) => {
         const px = tx * TILE_SIZE;
         const py = ty * TILE_SIZE;
         const pw = tw * TILE_SIZE;
         const ph = th * TILE_SIZE;
+
+        // 존별 테마 바닥 텍스처를 영역 전체에 깐다 (E-1)
+        if (themeKey) {
+          const floor = this.add.tileSprite(px + pw / 2, py + ph / 2, pw - 8, ph - 8, themeKey);
+          floor.setDepth(DEPTH_ZONE_FLOOR);
+        }
 
         // Draw low-opacity filled zone
         zoneGraphics.fillStyle(color, 0.05);
@@ -524,17 +692,18 @@ export default class LobbyScene extends Phaser.Scene {
           zoneName: name,
           x: cx,
           y: cy,
-          radius: 20
+          radius: 20,
+          color
         });
       };
 
       // Zones Setup: 중앙 광장, 배틀 아레나, 보스 레이드 존, 도감 박물관, 포켓몬 센터, 체육관
-      drawZone('중앙 광장', 50, 40, 20, 16, 0x00e5ff); // Cyan (Center)
-      drawZone('배틀 아레나', 96, 40, 16, 16, 0xef4444); // Red (East)
-      drawZone('보스 레이드 존', 8, 40, 16, 16, 0x8b5cf6); // Purple (West)
-      drawZone('도감 박물관', 50, 72, 20, 12, 0x10b981); // Emerald (South)
-      drawZone('포켓몬 센터', 8, 72, 16, 12, 0xec4899); // Pink (South-West)
-      drawZone('체육관', 96, 72, 16, 12, 0xf59e0b); // Amber (South-East)
+      drawZone('중앙 광장', 50, 40, 20, 16, 0x00e5ff, 'zone-plaza'); // Cyan (Center)
+      drawZone('배틀 아레나', 96, 40, 16, 16, 0xef4444, 'zone-lava'); // Red (East)
+      drawZone('보스 레이드 존', 8, 40, 16, 16, 0x8b5cf6, 'zone-nebula'); // Purple (West)
+      drawZone('도감 박물관', 50, 72, 20, 12, 0x10b981, 'zone-marble'); // Emerald (South)
+      drawZone('포켓몬 센터', 8, 72, 16, 12, 0xec4899, 'zone-pinktile'); // Pink (South-West)
+      drawZone('체육관', 96, 72, 16, 12, 0xf59e0b, 'zone-metal'); // Amber (South-East)
 
       // 퀴즈 존 (북) - 8개 단원 개별 포탈 생성
       const qpx = 8 * TILE_SIZE;
@@ -557,6 +726,11 @@ export default class LobbyScene extends Phaser.Scene {
         const cy = 12 * TILE_SIZE;
         const theme = UNIT_THEMES[i];
         const themeHex = '#' + theme.color.toString(16).padStart(6, '0');
+
+        // 단원 색 그라데이션 바닥 패치 (E-1)
+        const unitFloorKey = ensureUnitFloorTexture(this, theme.color);
+        const unitFloor = this.add.tileSprite(cx, cy, 12 * TILE_SIZE, 12 * TILE_SIZE, unitFloorKey);
+        unitFloor.setDepth(DEPTH_ZONE_FLOOR);
 
         // Glowing Ring Particle
         const qRing = this.add.arc(cx, cy, 14, 0, 360, false);
@@ -621,12 +795,13 @@ export default class LobbyScene extends Phaser.Scene {
           x: cx,
           y: cy,
           radius: 16,
-          unitId: i + 1
+          unitId: i + 1,
+          color: theme.color
         });
       }
 
       // 4. Instantiate Local Player (spawn at center of 120x90)
-      this.playerContainer = new RemotePlayerContainer(this, 1920, 1536, this.nickname, this.avatarConfig);
+      this.playerContainer = new RemotePlayerContainer(this, 1920, 1536, this.nickname, this.avatarConfig, this.reducedMotion);
 
       // Collider against bounds/walls
       if (wallLayer && this.playerContainer) {
@@ -649,6 +824,12 @@ export default class LobbyScene extends Phaser.Scene {
 
     // 6. Spawn wandering scientist NPCs
     this.spawnNPCs();
+
+    // 6.5. 절차적 장식 오브젝트 + 분위기 레이어 (E-1)
+    const decor = createLobbyDecorations(this, DEPTH_DECOR, this.reducedMotion);
+    this.decorTweens = decor.tweens;
+    this.setupAtmosphere();
+    this.setupMinimap();
 
     // 7. Event sync binding: React Presence List updates & Emotes
     const presenceListener = (e: Event) => {
@@ -703,7 +884,106 @@ export default class LobbyScene extends Phaser.Scene {
       window.removeEventListener('react:avatarUpdate', avatarListener);
       if (this.emoteClearTimer) this.emoteClearTimer.destroy();
       if (this.moveParticles) this.moveParticles.destroy();
+      if (this.bgParticles) this.bgParticles.destroy();
+      if (this.vignette) this.vignette.destroy();
+      if (this.minimap) this.minimap.destroy();
+      this.decorTweens.forEach(t => t.stop());
+      this.decorTweens = [];
     });
+  }
+
+  /**
+   * 분위기 레이어 (E-1): 배경 부유 파티클(먼지/별) + 비네팅.
+   * compositor 친화 속성만 사용하고, reduced-motion이면 파티클을 감쇠한다.
+   */
+  private setupAtmosphere(): void {
+    const worldW = MAP_WIDTH * TILE_SIZE;
+    const worldH = MAP_HEIGHT * TILE_SIZE;
+
+    // 배경 부유 먼지/별 — 파티클 수 상한으로 저사양 교실 PC 보호 (E-4)
+    if (!this.reducedMotion) {
+      this.bgParticles = this.add.particles(0, 0, 'dust', {
+        x: { min: 0, max: worldW },
+        y: { min: 0, max: worldH },
+        scale: { start: 0.5, end: 0 },
+        alpha: { start: 0.5, end: 0 },
+        lifespan: 4000,
+        frequency: 220,      // 약 4.5/초 → 동시 입자 ~18개로 제한
+        blendMode: 'ADD',
+        speedY: { min: -6, max: -18 },
+        speedX: { min: -4, max: 4 },
+      });
+      this.bgParticles.setDepth(DEPTH_BG_PARTICLE);
+    }
+
+    // 비네팅 — 카메라에 고정(scrollFactor 0)된 어두운 가장자리 오버레이
+    const cam = this.cameras.main;
+    const vignetteKey = 'lobby-vignette';
+    if (!this.textures.exists(vignetteKey)) {
+      const size = 256;
+      const canvas = this.textures.createCanvas(vignetteKey, size, size);
+      if (canvas) {
+        const ctx = canvas.getContext();
+        const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.3, size / 2, size / 2, size * 0.62);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        canvas.refresh();
+      }
+    }
+    this.vignette = this.add.image(cam.width / 2, cam.height / 2, vignetteKey);
+    this.vignette.setDisplaySize(cam.width, cam.height);
+    this.vignette.setScrollFactor(0);
+    this.vignette.setDepth(DEPTH_OVERLAY);
+    this.vignette.setAlpha(0.85);
+  }
+
+  /**
+   * 우상단 절차 미니맵 (E-3): 존 위치 + 내 위치 점. 카메라 고정(scrollFactor 0).
+   * 매 프레임 점 위치만 갱신하므로 비용이 낮다.
+   */
+  private setupMinimap(): void {
+    const cam = this.cameras.main;
+    const worldW = MAP_WIDTH * TILE_SIZE;
+    const worldH = MAP_HEIGHT * TILE_SIZE;
+    const panelW = 132;
+    this.minimapScale = panelW / worldW;
+    const panelH = worldH * this.minimapScale;
+
+    const originX = cam.width - panelW - 12;
+    const originY = 12;
+    this.minimapOrigin = { x: originX, y: originY };
+
+    const g = this.add.graphics();
+    g.fillStyle(0x05080f, 0.78);
+    g.fillRoundedRect(0, 0, panelW, panelH, 6);
+    g.lineStyle(1.5, 0x00e5ff, 0.5);
+    g.strokeRoundedRect(0, 0, panelW, panelH, 6);
+
+    // 존 마커
+    const zones: Array<{ x: number; y: number; color: number }> = [
+      { x: 60, y: 48, color: 0x00e5ff }, // 광장
+      { x: 104, y: 48, color: 0xef4444 }, // 배틀
+      { x: 16, y: 48, color: 0x8b5cf6 }, // 레이드
+      { x: 60, y: 78, color: 0x10b981 }, // 박물관
+      { x: 16, y: 78, color: 0xec4899 }, // 센터
+      { x: 104, y: 78, color: 0xf59e0b }, // 체육관
+      { x: 60, y: 12, color: 0xf59e0b }, // 퀴즈
+    ];
+    zones.forEach((z) => {
+      const mx = z.x * TILE_SIZE * this.minimapScale;
+      const my = z.y * TILE_SIZE * this.minimapScale;
+      g.fillStyle(z.color, 0.85);
+      g.fillCircle(mx, my, 2.5);
+    });
+
+    this.minimapDot = this.add.arc(0, 0, 3, 0, 360, false, 0xffffff);
+    this.minimapDot.setStrokeStyle(1, 0x00e5ff);
+
+    this.minimap = this.add.container(originX, originY, [g, this.minimapDot]);
+    this.minimap.setScrollFactor(0);
+    this.minimap.setDepth(DEPTH_OVERLAY);
   }
 
   public updateClassmates(
@@ -766,7 +1046,7 @@ export default class LobbyScene extends Phaser.Scene {
 
       let remote = this.remotePlayers.get(id);
       if (!remote) {
-        remote = new RemotePlayerContainer(this, targetPx, targetPy, nickname, avatar);
+        remote = new RemotePlayerContainer(this, targetPx, targetPy, nickname, avatar, this.reducedMotion);
         this.remotePlayers.set(id, remote);
       } else {
         remote.updateAvatar(avatar);
@@ -918,6 +1198,14 @@ export default class LobbyScene extends Phaser.Scene {
         remote.y = Phaser.Math.Linear(remote.y, remote.targetY, 0.15);
       }
     });
+
+    // 미니맵 내 위치 점 갱신 (E-3)
+    if (this.minimapDot && this.playerContainer) {
+      this.minimapDot.setPosition(
+        this.playerContainer.x * this.minimapScale,
+        this.playerContainer.y * this.minimapScale
+      );
+    }
   }
 
   private dispatchPositionUpdate(): void {
@@ -986,6 +1274,7 @@ export default class LobbyScene extends Phaser.Scene {
             return;
           } else {
             // Transition to RaidScene
+            this.playPortalEnterEffect(this.playerContainer.x, this.playerContainer.y, 0x8b5cf6);
             this.scene.start('RaidScene', {
               sessionCode: this.registry.get('sessionCode'),
               playerId: this.playerId,
@@ -1013,8 +1302,14 @@ export default class LobbyScene extends Phaser.Scene {
         else if (zoneName === '포켓몬 센터') mappedZone = 'center';
         else if (zoneName === '체육관') mappedZone = 'gym';
 
+        this.playPortalEnterEffect(
+          this.playerContainer.x,
+          this.playerContainer.y,
+          currentOverlapPortal.color ?? 0x00e5ff
+        );
+
         const event = new CustomEvent('phaser:zoneEntered', {
-          detail: { 
+          detail: {
             zone: mappedZone,
             unitId: currentOverlapPortal.unitId
           }
@@ -1023,6 +1318,43 @@ export default class LobbyScene extends Phaser.Scene {
       }
       this.lastEnteredZone = currentZoneKey;
     }
+  }
+
+  /**
+   * 포탈 진입 연출 (E-3): 파티클 버스트 + 카메라 플래시 + 짧은 줌 펀치.
+   * reduced-motion이면 줌·파티클을 생략하고 가벼운 플래시만 남긴다 (E-4).
+   */
+  private playPortalEnterEffect(x: number, y: number, color: number): void {
+    if (this.isTransitioning) return;
+    this.isTransitioning = true;
+
+    const col = Phaser.Display.Color.IntegerToColor(color);
+    const cam = this.cameras.main;
+    cam.flash(220, col.red, col.green, col.blue);
+
+    if (!this.reducedMotion) {
+      // 1회성 파티클 버스트 — 수명 후 자동 정리
+      const burst = this.add.particles(x, y, 'spark', {
+        speed: { min: 60, max: 180 },
+        scale: { start: 0.8, end: 0 },
+        alpha: { start: 0.9, end: 0 },
+        lifespan: 500,
+        blendMode: 'ADD',
+        tint: color,
+        emitting: false,
+      });
+      burst.setDepth(DEPTH_OVERLAY - 1);
+      burst.explode(24, x, y);
+      this.time.delayedCall(700, () => burst.destroy());
+
+      // 줌 펀치 — 진입감 강조 후 원복
+      const prevZoom = cam.zoom;
+      cam.zoomTo(prevZoom * 1.12, 140, 'Sine.easeOut');
+      this.time.delayedCall(160, () => cam.zoomTo(prevZoom, 200, 'Sine.easeInOut'));
+    }
+
+    // 연출 락 해제(다음 포탈 진입 허용). 씬 전환 시엔 무의미하나 안전.
+    this.time.delayedCall(400, () => { this.isTransitioning = false; });
   }
 
   private handlePresenceUpdate(
@@ -1110,7 +1442,7 @@ export default class LobbyScene extends Phaser.Scene {
 
       let remote = this.remotePlayers.get(id);
       if (!remote) {
-        remote = new RemotePlayerContainer(this, targetPx, targetPy, nickname, avatar);
+        remote = new RemotePlayerContainer(this, targetPx, targetPy, nickname, avatar, this.reducedMotion);
         this.remotePlayers.set(id, remote);
       } else {
         remote.updateAvatar(avatar);
