@@ -14,14 +14,17 @@ export interface AvatarConfig {
 export type CostumeId = string    // e.g. 'outfit_scientist', 'vehicle_rocket'
 export type EmoteId = 'wave' | 'cheer' | 'think' | 'celebrate' | 'sad'
 
+export type CostumeRarity = 'common' | 'rare' | 'epic' | 'legendary'
+
 export interface CostumeItem {
   id: CostumeId
   name: string                    // 한국어
   category: 'outfit' | 'accessory' | 'vehicle' | 'hat' | 'badge' | 'pet' | 'title'
-  rarity: 'common' | 'rare' | 'legendary'
+  rarity: CostumeRarity           // 4단계 등급 (epic 포함) — C-1/F-2
   unlockCondition: UnlockCondition
   price?: number                  // 코인으로 구매 가능한 경우
   spriteKey: string               // Phaser texture key
+  setId?: string                  // 세트 효과 그룹 ID (C-2)
   stats?: {
     hp?: number;
     attack?: number;

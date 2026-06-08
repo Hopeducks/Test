@@ -11,7 +11,7 @@ import {
   ItemInventory
 } from '../types';
 import { cards } from '../data/cards';
-import { costumeCatalog, UNIT_MILESTONE_COSTUME_IDS } from '../data/costume-catalog';
+import { costumeCatalog, UNIT_MILESTONE_COSTUME_IDS, getActiveSetBonus } from '../data/costume-catalog';
 import {
   CoinSource,
   applyAward,
@@ -1253,12 +1253,16 @@ class GameStateManager {
       }
     });
 
+    // 코스튬 세트 완성 보너스(C-2).
+    const { totalCpBonus } = getActiveSetBonus(itemsToSum);
+
     // D8: CP 가중치도 lib/progression.ts 1곳. 여기서는 데이터만 해석한다.
     return deriveCp({
       unlockedCardCount: unlockedCardIds.length,
       topTwoPowerSum: topTwoPowerSum(powers),
       equippedStatsSum,
       cardLevelSteps: sumCardLevelSteps(this.getProgress().cardLevels),
+      setBonus: totalCpBonus,
     });
   }
 }

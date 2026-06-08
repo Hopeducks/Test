@@ -19,6 +19,7 @@ export const costumeCatalog: CostumeItem[] = [
     unlockCondition: { type: 'achievement', achievementId: 'first_space_quiz' },
     price: 150,
     spriteKey: 'outfit_spacesuit_spr',
+    setId: 'set_space',
     stats: { hp: 25, defense: 5 }
   },
   {
@@ -66,6 +67,7 @@ export const costumeCatalog: CostumeItem[] = [
     unlockCondition: { type: 'purchase', coinCost: 120 },
     price: 120,
     spriteKey: 'outfit_doctor_spr',
+    setId: 'set_medic',
     stats: { hp: 28, defense: 5 }
   },
   {
@@ -125,6 +127,7 @@ export const costumeCatalog: CostumeItem[] = [
     unlockCondition: { type: 'purchase', coinCost: 60 },
     price: 60,
     spriteKey: 'acc_stethoscope_spr',
+    setId: 'set_medic',
     stats: { hp: 20, defense: 5 }
   },
   {
@@ -173,6 +176,7 @@ export const costumeCatalog: CostumeItem[] = [
     rarity: 'legendary',
     unlockCondition: { type: 'achievement', achievementId: 'rocket_pilot' },
     spriteKey: 'veh_rocket_spr',
+    setId: 'set_space',
     stats: { attack: 22, hp: 50 }
   },
   {
@@ -270,6 +274,7 @@ export const costumeCatalog: CostumeItem[] = [
     rarity: 'rare',
     unlockCondition: { type: 'achievement', achievementId: 'first_space_quiz' },
     spriteKey: 'hat_space_spr',
+    setId: 'set_space',
     stats: { hp: 20, attack: 5, defense: 5 }
   },
   {
@@ -443,8 +448,313 @@ export const costumeCatalog: CostumeItem[] = [
     unlockCondition: { type: 'achievement', achievementId: 'boss_slayer' },
     spriteKey: 'pet_dragon_spr',
     stats: { hp: 50, attack: 16, defense: 10 }
+  },
+
+  // ════════════════════════════════════════════════════════
+  // Phase F4 2.4 신규 상품 (46종) — 등급 4단계(epic 포함)·세트 효과
+  // ════════════════════════════════════════════════════════
+
+  // ── 신규 의상 (+9) ──────────────────────────────────
+  {
+    id: 'outfit_botanist', name: '식물학자 의상', category: 'outfit', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 90 }, price: 90,
+    spriteKey: 'outfit_botanist_spr', stats: { hp: 14, defense: 3 }
+  },
+  {
+    id: 'outfit_geologist', name: '지질학자 의상', category: 'outfit', rarity: 'common',
+    unlockCondition: { type: 'unit_complete', unitId: 6 },
+    spriteKey: 'outfit_geologist_spr', stats: { hp: 14, defense: 3 }
+  },
+  {
+    id: 'outfit_astronomer', name: '천문학자 의상', category: 'outfit', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 160 }, price: 160,
+    spriteKey: 'outfit_astronomer_spr', stats: { hp: 26, attack: 6, defense: 5 }
+  },
+  {
+    id: 'outfit_inventor', name: '발명가 의상', category: 'outfit', rarity: 'rare',
+    unlockCondition: { type: 'level', level: 4 },
+    spriteKey: 'outfit_inventor_spr', stats: { hp: 28, attack: 7, defense: 4 }
+  },
+  {
+    id: 'outfit_arctic', name: '극지 탐험대 의상', category: 'outfit', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 200 }, price: 200,
+    spriteKey: 'outfit_arctic_spr', stats: { hp: 32, defense: 8 }
+  },
+  {
+    id: 'outfit_marine', name: '심해 연구복', category: 'outfit', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 350 }, price: 350,
+    spriteKey: 'outfit_marine_spr', stats: { hp: 40, attack: 10, defense: 10 }
+  },
+  {
+    id: 'outfit_volcano', name: '화산 방호복', category: 'outfit', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 380 }, price: 380,
+    spriteKey: 'outfit_volcano_spr', setId: 'set_volcano', stats: { hp: 42, attack: 12, defense: 9 }
+  },
+  {
+    id: 'outfit_ninja_sci', name: '과학 닌자 슈트', category: 'outfit', rarity: 'epic',
+    unlockCondition: { type: 'level', level: 5 },
+    spriteKey: 'outfit_ninja_sci_spr', stats: { hp: 38, attack: 16, defense: 8 }
+  },
+  {
+    id: 'outfit_galaxy', name: '은하 수호자 의상', category: 'outfit', rarity: 'legendary',
+    unlockCondition: { type: 'purchase', coinCost: 800 }, price: 800,
+    spriteKey: 'outfit_galaxy_spr', setId: 'set_cosmos', stats: { hp: 60, attack: 18, defense: 14 }
+  },
+
+  // ── 신규 악세서리 (+9) ──────────────────────────────
+  {
+    id: 'accessory_beaker', name: '실험 비커', category: 'accessory', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 35 }, price: 35,
+    spriteKey: 'acc_beaker_spr', stats: { hp: 10, attack: 3 }
+  },
+  {
+    id: 'accessory_lightbulb', name: '아이디어 전구', category: 'accessory', rarity: 'common',
+    unlockCondition: { type: 'unit_complete', unitId: 2 },
+    spriteKey: 'acc_lightbulb_spr', stats: { hp: 10, attack: 4 }
+  },
+  {
+    id: 'accessory_battery', name: '에너지 배터리', category: 'accessory', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 45 }, price: 45,
+    spriteKey: 'acc_battery_spr', stats: { hp: 12, attack: 3 }
+  },
+  {
+    id: 'accessory_microscope', name: '휴대용 현미경', category: 'accessory', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 90 }, price: 90,
+    spriteKey: 'acc_microscope_spr', stats: { hp: 18, attack: 9, defense: 3 }
+  },
+  {
+    id: 'accessory_telescope', name: '손망원경', category: 'accessory', rarity: 'rare',
+    unlockCondition: { type: 'level', level: 3 },
+    spriteKey: 'acc_telescope_spr', stats: { hp: 16, attack: 10 }
+  },
+  {
+    id: 'accessory_magnet', name: '강력 자석', category: 'accessory', rarity: 'rare',
+    unlockCondition: { type: 'unit_complete', unitId: 7 },
+    spriteKey: 'acc_magnet_spr', stats: { hp: 18, attack: 8, defense: 4 }
+  },
+  {
+    id: 'accessory_dna', name: 'DNA 펜던트', category: 'accessory', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 320 }, price: 320,
+    spriteKey: 'acc_dna_spr', stats: { hp: 30, attack: 14, defense: 8 }
+  },
+  {
+    id: 'accessory_atom', name: '원자 모형', category: 'accessory', rarity: 'epic',
+    unlockCondition: { type: 'level', level: 5 },
+    spriteKey: 'acc_atom_spr', stats: { hp: 28, attack: 16, defense: 6 }
+  },
+  {
+    id: 'accessory_galaxy_orb', name: '은하 오브', category: 'accessory', rarity: 'legendary',
+    unlockCondition: { type: 'purchase', coinCost: 700 }, price: 700,
+    spriteKey: 'acc_galaxy_orb_spr', setId: 'set_cosmos', stats: { hp: 48, attack: 20, defense: 12 }
+  },
+
+  // ── 신규 탈것 (+6) ──────────────────────────────────
+  {
+    id: 'vehicle_bike', name: '과학 자전거', category: 'vehicle', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 80 }, price: 80,
+    spriteKey: 'veh_bike_spr', stats: { hp: 8, attack: 4 }
+  },
+  {
+    id: 'vehicle_hoverboard', name: '호버보드', category: 'vehicle', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 220 }, price: 220,
+    spriteKey: 'veh_hoverboard_spr', stats: { hp: 24, attack: 10, defense: 4 }
+  },
+  {
+    id: 'vehicle_dino_ride', name: '공룡 라이드', category: 'vehicle', rarity: 'rare',
+    unlockCondition: { type: 'unit_complete', unitId: 5 },
+    spriteKey: 'veh_dino_ride_spr', stats: { hp: 30, attack: 12, defense: 5 }
+  },
+  {
+    id: 'vehicle_jetpack', name: '제트팩', category: 'vehicle', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 360 }, price: 360,
+    spriteKey: 'veh_jetpack_spr', stats: { hp: 34, attack: 18, defense: 8 }
+  },
+  {
+    id: 'vehicle_mecha', name: '과학 메카', category: 'vehicle', rarity: 'epic',
+    unlockCondition: { type: 'level', level: 6 },
+    spriteKey: 'veh_mecha_spr', stats: { hp: 44, attack: 16, defense: 14 }
+  },
+  {
+    id: 'vehicle_dragon_ride', name: '드래곤 라이드', category: 'vehicle', rarity: 'legendary',
+    unlockCondition: { type: 'purchase', coinCost: 750 }, price: 750,
+    spriteKey: 'veh_dragon_ride_spr', stats: { hp: 55, attack: 22, defense: 13 }
+  },
+
+  // ── 신규 모자 (+7) ──────────────────────────────────
+  {
+    id: 'hat_party', name: '파티 고깔', category: 'hat', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 35 }, price: 35,
+    spriteKey: 'hat_party_spr', stats: { hp: 8, attack: 2 }
+  },
+  {
+    id: 'hat_antenna', name: '안테나 머리띠', category: 'hat', rarity: 'common',
+    unlockCondition: { type: 'unit_complete', unitId: 2 },
+    spriteKey: 'hat_antenna_spr', stats: { hp: 10, attack: 3 }
+  },
+  {
+    id: 'hat_wizard', name: '마법사 모자', category: 'hat', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 140 }, price: 140,
+    spriteKey: 'hat_wizard_spr', stats: { hp: 22, attack: 9, defense: 3 }
+  },
+  {
+    id: 'hat_pirate', name: '해적 모자', category: 'hat', rarity: 'rare',
+    unlockCondition: { type: 'unit_complete', unitId: 3 },
+    spriteKey: 'hat_pirate_spr', stats: { hp: 20, attack: 8, defense: 4 }
+  },
+  {
+    id: 'hat_halo', name: '천사 고리', category: 'hat', rarity: 'epic',
+    unlockCondition: { type: 'level', level: 5 },
+    spriteKey: 'hat_halo_spr', stats: { hp: 30, attack: 10, defense: 10 }
+  },
+  {
+    id: 'hat_volcano', name: '화산 헬멧', category: 'hat', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 340 }, price: 340,
+    spriteKey: 'hat_volcano_spr', setId: 'set_volcano', stats: { hp: 32, attack: 13, defense: 9 }
+  },
+  {
+    id: 'hat_galaxy', name: '은하 왕관', category: 'hat', rarity: 'legendary',
+    unlockCondition: { type: 'purchase', coinCost: 700 }, price: 700,
+    spriteKey: 'hat_galaxy_spr', setId: 'set_cosmos', stats: { hp: 52, attack: 17, defense: 13 }
+  },
+
+  // ── 신규 칭호 (+7) ──────────────────────────────────
+  {
+    id: 'title_explorer', name: '탐험가', category: 'title', rarity: 'common',
+    unlockCondition: { type: 'unit_complete', unitId: 1 },
+    spriteKey: 'title_explorer_spr', stats: { hp: 10, attack: 3 }
+  },
+  {
+    id: 'title_collector', name: '수집왕', category: 'title', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 150 }, price: 150,
+    spriteKey: 'title_collector_spr', stats: { hp: 18, attack: 8, defense: 4 }
+  },
+  {
+    id: 'title_inventor', name: '발명왕', category: 'title', rarity: 'rare',
+    unlockCondition: { type: 'level', level: 4 },
+    spriteKey: 'title_inventor_spr', stats: { hp: 18, attack: 9, defense: 3 }
+  },
+  {
+    id: 'title_legend_seeker', name: '전설 추적자', category: 'title', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 180 }, price: 180,
+    spriteKey: 'title_legend_seeker_spr', stats: { hp: 20, attack: 8, defense: 5 }
+  },
+  {
+    id: 'title_perfectionist', name: '완벽주의자', category: 'title', rarity: 'epic',
+    unlockCondition: { type: 'level', level: 5 },
+    spriteKey: 'title_perfectionist_spr', stats: { hp: 32, attack: 14, defense: 9 }
+  },
+  {
+    id: 'title_champion', name: '챔피언', category: 'title', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 400 }, price: 400,
+    spriteKey: 'title_champion_spr', stats: { hp: 34, attack: 15, defense: 10 }
+  },
+  {
+    id: 'title_grandmaster', name: '그랜드마스터', category: 'title', rarity: 'legendary',
+    unlockCondition: { type: 'purchase', coinCost: 900 }, price: 900,
+    spriteKey: 'title_grandmaster_spr', stats: { hp: 50, attack: 20, defense: 14 }
+  },
+
+  // ── 신규 펫 (+8) ────────────────────────────────────
+  {
+    id: 'pet_owl', name: '지혜의 부엉이', category: 'pet', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 70 }, price: 70,
+    spriteKey: 'pet_owl_spr', stats: { hp: 12, attack: 3 }
+  },
+  {
+    id: 'pet_penguin', name: '실험실 펭귄', category: 'pet', rarity: 'common',
+    unlockCondition: { type: 'unit_complete', unitId: 4 },
+    spriteKey: 'pet_penguin_spr', stats: { hp: 12, defense: 3 }
+  },
+  {
+    id: 'pet_turtle', name: '느림보 거북', category: 'pet', rarity: 'common',
+    unlockCondition: { type: 'purchase', coinCost: 75 }, price: 75,
+    spriteKey: 'pet_turtle_spr', stats: { hp: 16, defense: 4 }
+  },
+  {
+    id: 'pet_fox', name: '영리한 여우', category: 'pet', rarity: 'rare',
+    unlockCondition: { type: 'purchase', coinCost: 180 }, price: 180,
+    spriteKey: 'pet_fox_spr', stats: { hp: 20, attack: 9, defense: 4 }
+  },
+  {
+    id: 'pet_octopus', name: '심해 문어', category: 'pet', rarity: 'rare',
+    unlockCondition: { type: 'unit_complete', unitId: 3 },
+    spriteKey: 'pet_octopus_spr', stats: { hp: 22, attack: 8, defense: 5 }
+  },
+  {
+    id: 'pet_phoenix', name: '불사조', category: 'pet', rarity: 'epic',
+    unlockCondition: { type: 'purchase', coinCost: 380 }, price: 380,
+    spriteKey: 'pet_phoenix_spr', stats: { hp: 36, attack: 16, defense: 9 }
+  },
+  {
+    id: 'pet_unicorn', name: '유니콘', category: 'pet', rarity: 'epic',
+    unlockCondition: { type: 'level', level: 6 },
+    spriteKey: 'pet_unicorn_spr', stats: { hp: 38, attack: 14, defense: 11 }
+  },
+  {
+    id: 'pet_griffin', name: '전설의 그리핀', category: 'pet', rarity: 'legendary',
+    unlockCondition: { type: 'purchase', coinCost: 820 }, price: 820,
+    spriteKey: 'pet_griffin_spr', stats: { hp: 52, attack: 18, defense: 12 }
   }
 ];
+
+// ── 코스튬 세트 효과 (C-2) ────────────────────────────
+export interface CostumeSet {
+  id: string;
+  name: string;
+  /** 세트 완성에 필요한 전체 멤버 코스튬 ID — 모두 장착 시 보너스. */
+  memberIds: string[];
+  /** 세트 완성 시 추가 CP. */
+  cpBonus: number;
+  /** 세트 완성 시 노출되는 전용 칭호 텍스트. */
+  bonusTitle: string;
+}
+
+export const COSTUME_SETS: CostumeSet[] = [
+  {
+    id: 'set_space',
+    name: '우주 탐사대',
+    memberIds: ['outfit_spacesuit', 'hat_spacesuit_helmet', 'vehicle_rocket'],
+    cpBonus: 120,
+    bonusTitle: '우주 개척자',
+  },
+  {
+    id: 'set_medic',
+    name: '의료 연구진',
+    memberIds: ['outfit_doctor', 'accessory_stethoscope'],
+    cpBonus: 60,
+    bonusTitle: '생명 수호자',
+  },
+  {
+    id: 'set_volcano',
+    name: '화산 탐사대',
+    memberIds: ['outfit_volcano', 'hat_volcano'],
+    cpBonus: 90,
+    bonusTitle: '불의 정복자',
+  },
+  {
+    id: 'set_cosmos',
+    name: '은하 수호대',
+    memberIds: ['outfit_galaxy', 'hat_galaxy', 'accessory_galaxy_orb'],
+    cpBonus: 250,
+    bonusTitle: '은하의 수호자',
+  },
+];
+
+export interface ActiveSetResult {
+  totalCpBonus: number;
+  activeSets: CostumeSet[];
+}
+
+/**
+ * 장착된 코스튬 ID 목록에서 완성된 세트의 CP 보너스 합을 계산한다(순수).
+ * 'none'/빈 값은 무시한다.
+ */
+export function getActiveSetBonus(equippedIds: (string | undefined | null)[]): ActiveSetResult {
+  const equipped = new Set(equippedIds.filter((id): id is string => !!id && id !== 'none'));
+  const activeSets = COSTUME_SETS.filter(set => set.memberIds.every(id => equipped.has(id)));
+  const totalCpBonus = activeSets.reduce((sum, set) => sum + set.cpBonus, 0);
+  return { totalCpBonus, activeSets };
+}
 
 /**
  * 단원 80%+ 완료(checkMilestones) 시 해금되는 마일스톤 코스튬 ID.

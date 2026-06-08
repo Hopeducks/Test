@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Player, AvatarConfig, CostumeId, CostumeItem } from '../../types';
+import { Player, AvatarConfig, CostumeId, CostumeItem, CostumeRarity } from '../../types';
 import { useGameState } from '../../lib/game-state';
 import { supabase } from '../../lib/supabase-client';
 import { costumeCatalog } from '../../data/costume-catalog';
@@ -311,11 +311,13 @@ export default function AvatarCustomizer({ onClose }: AvatarCustomizerProps) {
     }
   };
 
-  // Rarity styling helpers
-  const getRarityBadgeStyle = (rarity: 'common' | 'rare' | 'legendary') => {
+  // Rarity styling helpers — 4단계 등급(epic 포함)
+  const getRarityBadgeStyle = (rarity: CostumeRarity) => {
     switch (rarity) {
       case 'legendary':
         return 'border-amber-500/50 bg-amber-950/40 text-amber-400';
+      case 'epic':
+        return 'border-fuchsia-500/50 bg-fuchsia-950/40 text-fuchsia-300';
       case 'rare':
         return 'border-purple-500/50 bg-purple-950/40 text-purple-400';
       default:

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AvatarConfig, CostumeId } from '../../../types';
-import { costumeCatalog } from '../../../data/costume-catalog';
+import { costumeCatalog, getActiveSetBonus } from '../../../data/costume-catalog';
 import { cards } from '../../../data/cards';
 import { Sparkles } from 'lucide-react';
 import { ITEM_EMOJIS } from './avatar-constants';
@@ -25,6 +25,17 @@ export default function AvatarPreviewPanel({ selectedItems, previewStats, hovere
     checkLegendary(selectedItems.accessory || null) ||
     checkLegendary(selectedItems.vehicle || null) ||
     checkLegendary(selectedItems.hat || null);
+
+  // 완성된 코스튬 세트(C-2) — 전용 칭호·CP 보너스 노출
+  const { activeSets } = getActiveSetBonus([
+    selectedItems.outfit,
+    selectedItems.accessory,
+    selectedItems.vehicle,
+    selectedItems.hat,
+    selectedItems.badge,
+    selectedItems.title,
+    selectedItems.petId,
+  ]);
 
   return (
     <div className="w-full md:w-[40%] flex flex-col items-center border-r border-cyan-500/10 pr-0 md:pr-6 pb-6 md:pb-0 shrink-0">
@@ -209,6 +220,21 @@ export default function AvatarPreviewPanel({ selectedItems, previewStats, hovere
           </div>
         </div>
       </div>
+
+      {/* ✨ 완성된 세트 효과 (C-2) */}
+      {activeSets.length > 0 && (
+        <div className="p-3.5 bg-fuchsia-950/20 border border-fuchsia-500/25 rounded-lg w-full mt-3">
+          <span className="text-fuchsia-300 font-bold text-xs block mb-2 font-mono tracking-wide">// SET BONUS ACTIVE</span>
+          <div className="space-y-1.5">
+            {activeSets.map(set => (
+              <div key={set.id} className="flex items-center justify-between text-[11px]">
+                <span className="font-black text-fuchsia-200">✨ {set.name}</span>
+                <span className="font-mono text-amber-400 font-bold">[{set.bonusTitle}] +{set.cpBonus} CP</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -118,11 +118,14 @@ export function deriveCp(input: {
   topTwoPowerSum: number;
   equippedStatsSum: number;
   cardLevelSteps: number;
+  /** 완성된 코스튬 세트의 CP 보너스 합(C-2). 미지정 시 0. */
+  setBonus?: number;
 }): number {
   return (
     input.unlockedCardCount * CP_WEIGHTS.perUnlockedCard +
     input.topTwoPowerSum +
     input.equippedStatsSum * CP_WEIGHTS.equippedStatMultiplier +
-    input.cardLevelSteps * CP_WEIGHTS.perCardLevelStep
+    input.cardLevelSteps * CP_WEIGHTS.perCardLevelStep +
+    (input.setBonus ?? 0)
   );
 }

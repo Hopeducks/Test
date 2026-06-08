@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { AvatarConfig, EmoteId } from '../../types';
 import { cards } from '../../data/cards';
+import { costumeCatalog } from '../../data/costume-catalog';
+import { ITEM_EMOJIS } from '../../components/ui/avatar/avatar-constants';
 
 const TILE_SIZE = 32;
 const MAP_WIDTH = 120;
@@ -137,71 +139,23 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
     const color = Phaser.Display.Color.HexStringToColor(avatar.bodyColor || '#4f46e5').color;
     this.bodyCircle.setFillStyle(color);
 
-    let vehicleEmoji = '';
-    if (avatar.vehicle) {
-      const v = avatar.vehicle;
-      if (v === 'vehicle_rocket') vehicleEmoji = '🚀';
-      else if (v === 'vehicle_ufo') vehicleEmoji = '🛸';
-      else if (v === 'vehicle_submarine') vehicleEmoji = '🚢';
-      else if (v === 'vehicle_balloon') vehicleEmoji = '🎈';
-      else if (v === 'vehicle_skates') vehicleEmoji = '🛼';
-      else if (v === 'vehicle_scooter') vehicleEmoji = '🛴';
-    }
-    this.vehicleText.setText(vehicleEmoji);
+    // 코스튬 이모지는 ITEM_EMOJIS(avatar-constants) 단일 소스에서 조회한다.
+    // (기존 per-id if/else 중복 제거 — 신규 카탈로그 항목도 자동 렌더)
+    const emojiOf = (id?: string | null): string =>
+      id && id !== 'none' ? ITEM_EMOJIS[id] || '' : '';
 
-    let outfitEmoji = '';
-    if (avatar.outfit) {
-      const o = avatar.outfit;
-      if (o === 'outfit_scientist') outfitEmoji = '🥼';
-      else if (o === 'outfit_spacesuit') outfitEmoji = '🧑‍🚀';
-      else if (o === 'outfit_diver') outfitEmoji = '🧑‍🤿';
-      else if (o === 'outfit_paleontologist') outfitEmoji = '🦕';
-      else if (o === 'outfit_chemist') outfitEmoji = '🧪';
-      else if (o === 'outfit_meteorologist') outfitEmoji = '🌦️';
-      else if (o === 'outfit_doctor') outfitEmoji = '🧑‍⚕️';
-      else if (o === 'outfit_optics') outfitEmoji = '👓';
-      else if (o === 'outfit_eco') outfitEmoji = '🌱';
-      else if (o === 'outfit_legend') outfitEmoji = '🏆';
-    }
-    this.outfitText.setText(outfitEmoji);
+    this.vehicleText.setText(emojiOf(avatar.vehicle));
+    this.outfitText.setText(emojiOf(avatar.outfit));
+    this.hatText.setText(emojiOf(avatar.hat));
 
-    let hatEmoji = '';
-    if (avatar.hat) {
-      const h = avatar.hat;
-      if (h === 'hat_explorer') hatEmoji = '🤠';
-      else if (h === 'hat_mortarboard') hatEmoji = '🎓';
-      else if (h === 'hat_helmet') hatEmoji = '🪖';
-      else if (h === 'hat_beanie') hatEmoji = '🧢';
-      else if (h === 'hat_spacesuit_helmet') hatEmoji = '👨‍🚀';
-      else if (h === 'hat_crown') hatEmoji = '👑';
-    }
-    this.hatText.setText(hatEmoji);
+    const badgeEmoji = avatar.badge && avatar.badge !== 'none'
+      ? ITEM_EMOJIS[avatar.badge] || '🎖️'
+      : '';
+    this.nameText.setText(badgeEmoji ? `${badgeEmoji} ${this.nickname}` : this.nickname);
 
-    let badgeEmoji = '';
-    if (avatar.badge && avatar.badge !== 'none') {
-      if (avatar.badge === 'accessory_badge') badgeEmoji = '🎖️';
-      else if (avatar.badge === 'accessory_badge_u1') badgeEmoji = '🪨';
-      else if (avatar.badge === 'accessory_badge_u2') badgeEmoji = '🌟';
-      else if (avatar.badge === 'accessory_badge_u3') badgeEmoji = '💧';
-      else if (avatar.badge === 'accessory_badge_u4') badgeEmoji = '❤️';
-      else if (avatar.badge === 'accessory_badge_u5') badgeEmoji = '🌿';
-      else if (avatar.badge === 'accessory_badge_u6') badgeEmoji = '🌀';
-      else if (avatar.badge === 'accessory_badge_u7') badgeEmoji = '👟';
-      else if (avatar.badge === 'accessory_badge_u8') badgeEmoji = '🧪';
-    }
-    
-    if (badgeEmoji) {
-      this.nameText.setText(`${badgeEmoji} ${this.nickname}`);
-    } else {
-      this.nameText.setText(this.nickname);
-    }
-
-    let titleString = '';
-    if (avatar.title && avatar.title !== 'none') {
-      if (avatar.title === 'title_beginner') titleString = '초보 연구원';
-      else if (avatar.title === 'title_gym_breaker') titleString = '체육관 돌파자';
-      else if (avatar.title === 'title_science_master') titleString = '과학 마스터';
-    }
+    const titleString = avatar.title && avatar.title !== 'none'
+      ? costumeCatalog.find(c => c.id === avatar.title)?.name ?? ''
+      : '';
     if (titleString) {
       this.titleText.setText(`[${titleString}]`);
       this.titleText.setVisible(true);
@@ -211,16 +165,11 @@ class RemotePlayerContainer extends Phaser.GameObjects.Container {
 
     let petEmoji = '';
     if (avatar.petId && avatar.petId !== 'none') {
-      if (avatar.petId === 'pet_robo') petEmoji = '🤖';
-      else if (avatar.petId === 'pet_slime') petEmoji = '🟢';
-      else if (avatar.petId === 'pet_dino') petEmoji = '🦖';
-      else if (avatar.petId === 'pet_cat') petEmoji = '🐱';
-      else if (avatar.petId === 'pet_dragon') petEmoji = '🐉';
-      else {
+      petEmoji = ITEM_EMOJIS[avatar.petId] || '';
+      if (!petEmoji) {
+        // 펫이 도감 카드인 경우(card petId) 카드 이모지로 폴백.
         const card = cards.find(c => c.id === avatar.petId);
-        if (card) {
-          petEmoji = card.image || card.emoji || '';
-        }
+        petEmoji = card?.image || card?.emoji || '';
       }
     }
     this.petText.setText(petEmoji);
