@@ -4,7 +4,8 @@ import { ensureZoneTextures, ensureUnitFloorTexture, ZoneTextureKey } from './lo
 import { prefersReducedMotion, ensureSoftCircleTexture } from './lobby/lobby-visuals';
 import { createLobbyDecorations } from './lobby/decorations';
 import { RemotePlayerContainer } from './lobby/remote-player';
-import { Portal, NpcData, UNIT_THEMES, SCIENTIST_TRIVIA } from './lobby/lobby-constants';
+import { Portal, UNIT_THEMES } from './lobby/lobby-constants';
+import { spawnNPCs, NpcInstance } from './lobby/npc-system';
 
 const TILE_SIZE = 32;
 const MAP_WIDTH = 120;
@@ -47,7 +48,7 @@ export default class LobbyScene extends Phaser.Scene {
   private portals: Portal[] = [];
   private portalRings: Map<string, Phaser.GameObjects.Arc> = new Map();
   private lastEnteredZone: string | null = null;
-  private npcs: Array<{ container: Phaser.GameObjects.Container; initialX: number; initialY: number; name: string }> = [];
+  private npcs: NpcInstance[] = [];
   private emoteClearTimer: Phaser.Time.TimerEvent | null = null;
   private moveParticles: any = null; // Spark particle trail emitter
   private reducedMotion: boolean = false;
@@ -456,7 +457,7 @@ export default class LobbyScene extends Phaser.Scene {
     }
 
     // 6. Spawn wandering scientist NPCs
-    this.spawnNPCs();
+    this.npcs = spawnNPCs(this);
 
     // 6.5. 절차적 장식 오브젝트 + 분위기 레이어 (E-1)
     const decor = createLobbyDecorations(this, DEPTH_DECOR, this.reducedMotion);
@@ -1101,185 +1102,4 @@ export default class LobbyScene extends Phaser.Scene {
     });
   }
 
-  private spawnNPCs(): void {
-    const npcDefinitions: NpcData[] = [
-      { name: '갈릴레이 박사', emoji: '🔭', initialX: 464, initialY: 320 },    // 1단원
-      { name: '뉴턴 박사', emoji: '🧑‍🔬', initialX: 880, initialY: 320 },     // 2단원
-      { name: '파스퇴르 박사', emoji: '🧪', initialX: 1296, initialY: 320 },      // 3단원
-      { name: '나이팅게일 박사', emoji: '🩺', initialX: 1712, initialY: 320 },    // 4단원
-      { name: '다윈 박사', emoji: '🧔', initialX: 2128, initialY: 320 },        // 5단원
-      { name: '베게너 박사', emoji: '🌀', initialX: 2544, initialY: 320 },      // 6단원
-      { name: '아인슈타인 박사', emoji: '👨‍🔬', initialX: 2960, initialY: 320 },  // 7단원
-      { name: '퀴리 박사', emoji: '👩‍🔬', initialX: 3376, initialY: 320 },      // 8단원
-      { name: '아이템 상인 포켓박사', emoji: '🪙', initialX: 1920, initialY: 1480 } // 상점
-    ];
-
-    npcDefinitions.forEach(npc => {
-      const container = this.add.container(npc.initialX, npc.initialY);
-      const visuals = this.add.container(0, 0);
-      container.add(visuals);
-
-      // Glowing green hover plate beneath drone NPC
-      const hoverColor = npc.name === '아이템 상인 포켓박사' ? 0xf59e0b : 0x10b981;
-      const hoverPlate = this.add.ellipse(0, 18, 20, 6, hoverColor, 0.4);
-      visuals.add(hoverPlate);
-      this.tweens.add({
-        targets: hoverPlate,
-        scaleX: 1.35,
-        scaleY: 1.35,
-        alpha: 0.05,
-        yoyo: true,
-        repeat: -1,
-        duration: 1200 + Phaser.Math.Between(0, 300)
-      });
-
-      // Base body circle for NPC (cyber drone casing)
-      const bodyCircle = this.add.arc(0, 0, 16, 0, 360, false, 0x0f172a);
-      bodyCircle.setStrokeStyle(2.5, hoverColor);
-      visuals.add(bodyCircle);
-
-      // Head text/emoji representing the scientist inside the drone bubble
-      const head = this.add.text(0, -4, npc.emoji, { fontSize: '18px' }).setOrigin(0.5);
-      visuals.add(head);
-
-      // Name tag
-      const tag = this.add.text(0, -25, npc.name, {
-        fontFamily: 'Arial',
-        fontSize: '9px',
-        color: '#' + hoverColor.toString(16).padStart(6, '0'),
-        backgroundColor: '#020617ef',
-        padding: { x: 4, y: 1.5 }
-      }).setOrigin(0.5);
-      visuals.add(tag);
-
-      // Trivia speech bubble (invisible initially)
-      const bubbleBg = this.add.graphics();
-      const bubbleText = this.add.text(0, 0, '', {
-        fontFamily: 'Galmuri11',
-        fontSize: '11px',
-        color: '#ffffff',
-        wordWrap: { width: 140 }
-      }).setOrigin(0.5);
-
-      const bubbleContainer = this.add.container(0, -65, [bubbleBg, bubbleText]);
-      bubbleContainer.setVisible(false);
-      visuals.add(bubbleContainer);
-
-      // Click Interaction Setup
-      container.setSize(36, 36);
-      container.setInteractive(new Phaser.Geom.Rectangle(-18, -18, 36, 36), Phaser.Geom.Rectangle.Contains);
-      if (container.input) {
-        container.input.cursor = 'pointer';
-      }
-
-      container.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-        if (npc.name === '아이템 상인 포켓박사') {
-          window.dispatchEvent(new CustomEvent('react:openShop'));
-        } else {
-          // Open storytelling NPC quest modal
-          window.dispatchEvent(new CustomEvent('react:openNpcQuest', { detail: { name: npc.name } }));
-        }
-        this.showTriviaBubble(bubbleContainer, bubbleBg, bubbleText, npc.name === '아이템 상인 포켓박사', npc.name);
-      });
-
-      // Add a floating bobbing animation to the visuals container to hover smoothly
-      this.tweens.add({
-        targets: visuals,
-        y: -6,
-        yoyo: true,
-        repeat: -1,
-        duration: 1500 + Phaser.Math.Between(0, 500),
-        ease: 'Sine.easeInOut'
-      });
-
-      this.npcs.push({
-        container,
-        initialX: npc.initialX,
-        initialY: npc.initialY,
-        name: npc.name
-      });
-    });
-
-    // Wandering Timer Loop: run NPC movement updates every 5 seconds
-    this.time.addEvent({
-      delay: 5000,
-      callback: () => {
-        this.npcs.forEach(npc => {
-          if (npc.name === '아이템 상인 포켓박사') return; // 상인은 고정
-          if (Math.random() < 0.5) {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Phaser.Math.Between(30, 80);
-            
-            const targetX = Phaser.Math.Clamp(npc.initialX + Math.cos(angle) * distance, 64, MAP_WIDTH * TILE_SIZE - 64);
-            const targetY = Phaser.Math.Clamp(npc.initialY + Math.sin(angle) * distance, 64, MAP_HEIGHT * TILE_SIZE - 64);
-
-            const duration = Phaser.Math.Between(1500, 2500);
-
-            this.tweens.add({
-              targets: npc.container,
-              x: targetX,
-              y: targetY,
-              duration: duration,
-              ease: 'Sine.easeInOut'
-            });
-          }
-        });
-      },
-      loop: true
-    });
-  }
-
-  private showTriviaBubble(
-    bubble: Phaser.GameObjects.Container,
-    bg: Phaser.GameObjects.Graphics,
-    txt: Phaser.GameObjects.Text,
-    isMerchant: boolean = false,
-    npcName: string = ''
-  ): void {
-    let trivia = '';
-    if (isMerchant) {
-      trivia = "어서오세요! 퀴즈로 번 코인으로 모험에 필요한 유용한 아이템을 구매하세요!";
-    } else if (npcName === '다윈 박사') {
-      trivia = "생물과 환경의 평형 관계는 아주 중요하단다. 숲을 살려주게나!";
-    } else if (npcName === '베게너 박사') {
-      trivia = "이슬과 안개는 수증기의 응결 현상으로 발생하는 아름다운 날씨란다.";
-    } else if (npcName === '파스퇴르 박사') {
-      trivia = "물질이 녹아 섞이는 용해 현상의 신비를 밝혀주게.";
-    } else if (npcName === '나이팅게일 박사') {
-      trivia = "우리 몸의 호흡과 순환은 모두 유기적으로 연결되어 작동한단다.";
-    } else {
-      trivia = SCIENTIST_TRIVIA[Phaser.Math.Between(0, SCIENTIST_TRIVIA.length - 1)];
-    }
-    txt.setText(trivia);
-
-    const padding = 10;
-    const textWidth = txt.width;
-    const textHeight = txt.height;
-
-    const bubbleWidth = textWidth + padding * 2;
-    const bubbleHeight = textHeight + padding * 2;
-
-    bg.clear();
-    bg.fillStyle(0x090f1d, 0.95);
-    bg.fillRoundedRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, 8);
-    const borderCol = isMerchant ? 0xf59e0b : 0x10b981;
-    bg.lineStyle(2, borderCol, 1);
-    bg.strokeRoundedRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, 8);
-
-    // Speak tail drawing
-    bg.beginPath();
-    bg.moveTo(-6, bubbleHeight / 2);
-    bg.lineTo(0, bubbleHeight / 2 + 8);
-    bg.lineTo(6, bubbleHeight / 2);
-    bg.closePath();
-    bg.fillPath();
-    bg.strokePath();
-
-    txt.setPosition(0, 0);
-    bubble.setVisible(true);
-
-    this.time.delayedCall(4000, () => {
-      bubble.setVisible(false);
-    });
-  }
 }

@@ -1,10 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useGameState from '../../lib/game-state';
-import TeacherDashboard from './TeacherDashboard';
 import TeacherPasswordGate from './TeacherPasswordGate';
+import { Loader2 as DashboardLoader } from 'lucide-react';
+
+const TeacherDashboard = dynamic(() => import('./TeacherDashboard'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64 text-cyan-400">
+      <DashboardLoader className="w-6 h-6 animate-spin mr-2" />
+      <span className="text-sm font-mono">대시보드 로딩 중...</span>
+    </div>
+  ),
+});
 import { supabase } from '../../lib/supabase-client';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { gameAudio } from '../../lib/audio';
