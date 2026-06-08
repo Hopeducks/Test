@@ -35,6 +35,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
     gainCardXp,
     addWrongAnswer,
     removeWrongAnswer,
+    triggerAchievementEvent,
   } = useGameState();
 
   const [player, setPlayer] = useState<Player | null>(null);
@@ -230,9 +231,12 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
 
       if (response.correct) {
         setScore(prev => prev + 1);
-        setStreak(prev => prev + 1);
+        const newStreak = streak + 1;
+        setStreak(newStreak);
         setFlashType('correct');
         gameAudio.playCorrect();
+        // 연속 정답 업적 평가 (streak)
+        triggerAchievementEvent({ type: 'streak', val: newStreak });
         if (isReviewMode) removeWrongAnswer(currentQuestion.id);
 
         // ── AWARD XP ON CORRECT ANSWER ──
@@ -306,8 +310,10 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
     setIsAnswered(true);
     broadcastQuizAnswer(q.id, isCorrect, isCorrect && q.cardReward ? q.cardReward : undefined);
     if (isCorrect) {
-      setScore(prev => prev + 1); setStreak(prev => prev + 1);
+      const newStreak = streak + 1;
+      setScore(prev => prev + 1); setStreak(newStreak);
       setFlashType('correct'); gameAudio.playCorrect();
+      triggerAchievementEvent({ type: 'streak', val: newStreak });
       if (isReviewMode) removeWrongAnswer(q.id);
       if (q.cardReward) { unlockCard(q.cardReward); setNewlyUnlockedCardIds(prev => [...prev, q.cardReward!]); }
     } else {

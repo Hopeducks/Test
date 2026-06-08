@@ -34,7 +34,7 @@ interface QuestCategory {
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
 export default function LobbyQuestsPanel({ progress, getTrainerInfo, onClaimQuest }: LobbyQuestsPanelProps) {
-  const myCoins = progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10;
+  const myCoins = progress.coins ?? 0;
   const cardLevelsSum = progress.unlockedCardIds.reduce((sum, id) => sum + (progress.cardLevels?.[id] || 1), 0);
   const badgesCount = progress.unlockedBadges?.length || 0;
 

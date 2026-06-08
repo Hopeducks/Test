@@ -8,7 +8,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     description: '1단원 (지층과 화석) 퀴즈를 완료하세요.',
     icon: '🪨',
     condition: { type: 'unit_complete', unitId: 1 },
-    reward: { type: 'costume', costumeId: 'outfit_explorer' }
+    reward: { type: 'costume', costumeId: 'hat_explorer' }
   },
   {
     id: 'unit_2_clear',
@@ -24,7 +24,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     description: '3단원 (용해와 용액) 퀴즈를 완료하세요.',
     icon: '🧪',
     condition: { type: 'unit_complete', unitId: 3 },
-    reward: { type: 'costume', costumeId: 'accessory_beaker' }
+    reward: { type: 'costume', costumeId: 'accessory_testtube' }
   },
   {
     id: 'unit_4_clear',
@@ -32,7 +32,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     description: '4단원 (우리 몸) 퀴즈를 완료하세요.',
     icon: '❤️',
     condition: { type: 'unit_complete', unitId: 4 },
-    reward: { type: 'costume', costumeId: 'outfit_gown' }
+    reward: { type: 'costume', costumeId: 'outfit_doctor' }
   },
   {
     id: 'unit_5_clear',
@@ -40,7 +40,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     description: '5단원 (생물과 환경) 퀴즈를 완료하세요.',
     icon: '🌿',
     condition: { type: 'unit_complete', unitId: 5 },
-    reward: { type: 'costume', costumeId: 'accessory_aura' }
+    reward: { type: 'costume', costumeId: 'outfit_eco' }
   },
   {
     id: 'unit_6_clear',
@@ -48,7 +48,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     description: '6단원 (날씨와 우리 생활) 퀴즈를 완료하세요.',
     icon: '🌀',
     condition: { type: 'unit_complete', unitId: 6 },
-    reward: { type: 'costume', costumeId: 'expression_fire' }
+    reward: { type: 'costume', costumeId: 'outfit_meteorologist' }
   },
   {
     id: 'unit_7_clear',
@@ -64,7 +64,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     description: '8단원 (산과 염기) 퀴즈를 완료하세요.',
     icon: '⚗️',
     condition: { type: 'unit_complete', unitId: 8 },
-    reward: { type: 'costume', costumeId: 'outfit_crown' }
+    reward: { type: 'costume', costumeId: 'hat_crown' }
   },
 
   // ── 연속 정답 스트릭 (3개) ───────────────────────────────────────

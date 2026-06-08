@@ -445,3 +445,18 @@ export const costumeCatalog: CostumeItem[] = [
     stats: { hp: 50, attack: 16, defense: 10 }
   }
 ];
+
+/**
+ * 단원 80%+ 완료(checkMilestones) 시 해금되는 마일스톤 코스튬 ID.
+ * 모든 값은 위 costumeCatalog에 실제로 존재하는 ID여야 한다 (정합성 테스트로 강제). — D4
+ */
+export const UNIT_MILESTONE_COSTUME_IDS: Record<number, string> = {
+  1: 'hat_explorer',
+  2: 'accessory_magnifier',
+  3: 'accessory_testtube',
+  4: 'outfit_doctor',
+  5: 'outfit_eco',
+  6: 'outfit_meteorologist',
+  7: 'outfit_spacesuit',
+  8: 'hat_crown',
+};

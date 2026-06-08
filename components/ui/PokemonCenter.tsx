@@ -16,8 +16,7 @@ export default function PokemonCenter({ onClose }: PokemonCenterProps) {
   const { 
     progress, 
     removeWrongAnswer, 
-    getLocalPlayer, 
-    setLocalPlayer 
+    gainCardXp
   } = useGameState();
 
   const wrongAnswerIds = progress.wrongAnswers || [];
@@ -55,16 +54,12 @@ export default function PokemonCenter({ onClose }: PokemonCenterProps) {
     if (isCorrect) {
       gameAudio.playCorrect();
       
-      // Heal operation
+      // Heal operation (오답 복습 성공 = 치료). 코인 대신 카드 경험치로 보상. (PRD EPIC A/D)
       removeWrongAnswer(selectedQuestion.id);
-      
-      // Reward 10 coins
-      const player = getLocalPlayer();
-      player.coins += 10;
-      setLocalPlayer(player);
 
       // Find pokemon card linked to this question reward
       const matchingCard = cards.find(c => c.id === selectedQuestion.cardReward) || cards[0];
+      gainCardXp([matchingCard.id], 20);
       setHealedCardName(matchingCard.name);
       setHealedCardEmoji(matchingCard.emoji || matchingCard.image || '🧬');
 

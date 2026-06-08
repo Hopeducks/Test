@@ -271,6 +271,8 @@ export interface GameProgress {
   unlockedBadges?: string[]
   wrongAnswers?: string[]
   gymLeaderBeaten?: Record<number, boolean>
+  earnedAchievementIds?: string[]   // 획득한 업적 ID (영속) — D7
+  earnedTitles?: string[]           // 업적 보상으로 획득한 칭호 텍스트 — D3
 }
 
 export interface StudentResponse {

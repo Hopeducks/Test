@@ -27,11 +27,9 @@ const GYM_LEADERS = [
 ];
 
 export default function GymLeaderBattle({ unitId, onClose, onDefeated, onGoToCenter }: GymLeaderBattleProps) {
-  const { 
-    unlockBadge, 
-    getLocalPlayer, 
-    setLocalPlayer,
-    equippedCosmetics 
+  const {
+    unlockBadge,
+    equippedCosmetics
   } = useGameState();
 
   const leader = useMemo(() => GYM_LEADERS.find(g => g.unitId === unitId) || GYM_LEADERS[0], [unitId]);
@@ -83,14 +81,9 @@ export default function GymLeaderBattle({ unitId, onClose, onDefeated, onGoToCen
     setChosenOpt(null);
 
     if (leaderHp <= 0) {
-      // Victory!
+      // Victory! 배지 해금 + 최초 격파 시 마일스톤 코인은 unlockBadge 내부에서 지급(Phase 1.3).
       gameAudio.playCatchSuccess();
       unlockBadge(unitId);
-      
-      // Grant 150 coins
-      const player = getLocalPlayer();
-      player.coins += 150;
-      setLocalPlayer(player);
 
       setBattleStatus('won');
       onDefeated();

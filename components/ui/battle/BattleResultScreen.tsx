@@ -43,7 +43,7 @@ export default function BattleResultScreen({ battleOutcome, awardedCoins, rounds
 
       {/* Reward block */}
       <div className="p-4 bg-gray-950 border border-gray-900 rounded-xl max-w-sm mx-auto my-6 text-sm text-gray-400">
-        획득 보상 코인: <span className="text-yellow-400 font-extrabold">+{awardedCoins} 코인 🪙</span>
+        획득 카드 경험치: <span className="text-cyan-400 font-extrabold">+{awardedCoins} XP ⚡</span>
       </div>
 
       {/* Rounds details summary */}

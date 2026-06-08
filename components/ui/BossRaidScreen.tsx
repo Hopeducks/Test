@@ -31,7 +31,7 @@ interface Contribution {
 }
 
 export default function BossRaidScreen({ sessionCode, player, onRaidComplete, onCancel }: BossRaidScreenProps) {
-  const { unlockCard, gainItem, getLocalPlayer, setLocalPlayer, equippedCosmetics, progress } = useGameState();
+  const { unlockCard, gainItem, gainCardXp, equippedCosmetics, progress, triggerAchievementEvent } = useGameState();
 
   const partnerCard = useMemo(() => {
     const petId = equippedCosmetics.petId;
@@ -72,6 +72,7 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
   // Floating Damage numbers React overlay
   const [popups, setPopups] = useState<DamagePopup[]>([]);
   const popupIdCounter = useRef(0);
+  const myDamageTotalRef = useRef(0); // 내 누적 보스 데미지 (업적 평가용)
 
   // Screen Shake/Flash/Explosion
   const [screenShake, setScreenShake] = useState(false);
@@ -239,6 +240,10 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
       };
     });
 
+    // 누적 보스 데미지 업적 평가 (boss_damage) — ref로 순수 계산
+    myDamageTotalRef.current += dmg;
+    triggerAchievementEvent({ type: 'boss_damage', val: myDamageTotalRef.current });
+
     spawnPopup(dmg, isMiss, senderLabel);
   };
 
@@ -312,39 +317,25 @@ export default function BossRaidScreen({ sessionCode, player, onRaidComplete, on
         unlockCard(bossCard.id);
       }
 
-      // 2. Award bonus coins to top 3 contributors
-      awardBonusCoins();
+      // 2. 기여도 상위일수록 더 많은 카드 경험치 지급 (코인 미지급 — 마일스톤만 코인 지급)
+      awardRaidXp();
     }, 2500);
   };
 
-  const awardBonusCoins = async () => {
+  const awardRaidXp = () => {
     if (bonusAwarded) return;
     setBonusAwarded(true);
 
     const sortedLeaderboard = Object.entries(contributions)
       .map(([id, val]) => ({ id, ...val }))
       .sort((a, b) => b.damage - a.damage);
-    
-    // Find my index
+
+    // 내 순위에 따른 경험치 보너스 (1등 60 / 2등 40 / 3등 30 / 그 외 20)
     const myRankIdx = sortedLeaderboard.findIndex(item => item.id === player.id);
-    if (myRankIdx !== -1 && myRankIdx < 3) {
-      // Top 3 bonus: 1st = 100, 2nd = 60, 3rd = 30 coins
-      const bonus = myRankIdx === 0 ? 100 : myRankIdx === 1 ? 60 : 30;
-      
-      try {
-        const { data: currentDbPlayer } = await supabase.from('players').select('coins').eq('id', player.id).single();
-        const prevCoins = currentDbPlayer?.coins ?? player.coins;
-        await supabase.from('players').update({ coins: prevCoins + bonus }).eq('id', player.id);
-        
-        // Update local context
-        const local = getLocalPlayer();
-        if (local) {
-          local.coins += bonus;
-          setLocalPlayer(local);
-        }
-      } catch (err) {
-        console.error('Failed to reward leaderboard bonus coins:', err);
-      }
+    const xpGain = myRankIdx === 0 ? 60 : myRankIdx === 1 ? 40 : myRankIdx === 2 ? 30 : 20;
+
+    if (progress.unlockedCardIds.length > 0) {
+      gainCardXp(progress.unlockedCardIds, xpGain);
     }
   };
 

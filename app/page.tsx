@@ -103,6 +103,26 @@ export default function Home() {
     cardEmoji: string;
   } | null>(null);
 
+  // 업적 달성 토스트 (전역) — react:achievementUnlocked 수신
+  const [achievementToasts, setAchievementToasts] = useState<
+    { id: number; name: string; icon: string }[]
+  >([]);
+
+  useEffect(() => {
+    let counter = 0;
+    const handleAchievement = (e: Event) => {
+      const detail = (e as CustomEvent<{ name: string; icon: string }>).detail;
+      if (!detail) return;
+      const id = counter++;
+      setAchievementToasts(prev => [...prev, { id, name: detail.name, icon: detail.icon }]);
+      setTimeout(() => {
+        setAchievementToasts(prev => prev.filter(t => t.id !== id));
+      }, 4000);
+    };
+    window.addEventListener('react:achievementUnlocked', handleAchievement);
+    return () => window.removeEventListener('react:achievementUnlocked', handleAchievement);
+  }, []);
+
   // Global calculations
   const totalCards = cards.length;
   const unlockedCount = unlockedCardIds.length;
@@ -484,6 +504,26 @@ export default function Home() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 업적 달성 토스트 (전역) */}
+      {achievementToasts.length > 0 && (
+        <div className="fixed top-4 right-4 z-[70] flex flex-col gap-2 pointer-events-none">
+          {achievementToasts.map(toast => (
+            <div
+              key={toast.id}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-950/95 to-[#0d0a04] border border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-scale-up"
+            >
+              <span className="text-2xl">{toast.icon}</span>
+              <div className="text-left">
+                <div className="text-[9px] font-mono text-amber-500 uppercase tracking-widest font-black">
+                  업적 달성!
+                </div>
+                <div className="text-sm font-black text-amber-300">{toast.name}</div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

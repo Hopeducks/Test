@@ -695,7 +695,7 @@ export default function StudentLobby({
                 <div className="flex justify-between">
                   <span>보유 재화:</span>
                   <span className="text-amber-450 font-black text-gray-250 flex items-center gap-1.5">
-                    🪙 {progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10} 코인
+                    🪙 {progress.coins ?? 0} 코인
                   </span>
                 </div>
               </div>

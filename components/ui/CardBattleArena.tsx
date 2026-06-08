@@ -27,6 +27,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     classroomSession,
     getLocalPlayer,
     setLocalPlayer,
+    gainCardXp,
     useItem
   } = useGameState();
 
@@ -548,32 +549,32 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
   const endBattle = async (finalPlayerHp: number, finalOppHp: number) => {
     let outcome: 'victory' | 'defeat' | 'draw' = 'draw';
-    let coins = 10;
+    // 전투 보상은 코인이 아니라 카드 경험치(레벨 연동). 코인은 마일스톤에서만 지급. (PRD EPIC A/D)
+    let xpGain = 20;
 
     if (finalPlayerHp > finalOppHp) {
       outcome = 'victory';
-      coins = 35;
+      xpGain = 45;
       gameAudio.playCatchSuccess();
     } else if (finalOppHp > finalPlayerHp) {
       outcome = 'defeat';
-      coins = 15;
+      xpGain = 15;
       gameAudio.playWrong();
     } else {
       outcome = 'draw';
-      coins = 20;
+      xpGain = 25;
     }
 
     setBattleOutcome(outcome);
-    setAwardedCoins(coins);
+    setAwardedCoins(xpGain);
 
     // ── 배틀 종료 Broadcast ──
     broadcastBattleEnd(outcome);
 
-    // Save coins to Player Inventory
-    const local = getLocalPlayer();
-    if (local) {
-      local.coins += coins;
-      setLocalPlayer(local);
+    // 사용한 덱 카드에 경험치 지급 (코인 미지급)
+    const deckCardIds = deck.map(c => c.id);
+    if (deckCardIds.length > 0) {
+      gainCardXp(deckCardIds, xpGain);
     }
 
     // Write battle results to Supabase game_sessions list
@@ -584,7 +585,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
         outcome,
         rounds_won: roundsHistory.filter(r => r.winner === 'player').length,
         rounds_lost: roundsHistory.filter(r => r.winner === 'opponent').length,
-        awarded_coins: coins
+        awarded_coins: xpGain
       });
       console.log('Battle results saved:', data);
     } catch (e) {
