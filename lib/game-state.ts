@@ -11,7 +11,23 @@ import {
   ItemInventory
 } from '../types';
 import { cards } from '../data/cards';
-import { costumeCatalog } from '../data/costume-catalog';
+import { costumeCatalog, UNIT_MILESTONE_COSTUME_IDS } from '../data/costume-catalog';
+import {
+  CoinSource,
+  applyAward,
+  applySpend,
+  canAfford,
+  normalizeLoadedCoins,
+  firstClearBonus,
+  highScoreBonus,
+  gymFirstClearBonus,
+} from './economy';
+import {
+  deriveProgression,
+  sumCardLevelSteps,
+  topTwoPowerSum,
+  deriveCp,
+} from './progression';
 
 // 속성(Attribute) 시스템은 lib/attributes.ts로 추출됨.
 // 기존 import 경로 하위 호환을 위해 game-state에서 re-export 한다.
@@ -109,6 +125,7 @@ class GameStateManager {
   private listeners: Set<() => void> = new Set();
   private isInitialized = false;
   private localQuizSession: ClassroomSession | null = null;
+  private isGrantingReward = false; // 업적 보상 지급 중 재귀 방지 가드
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -174,8 +191,15 @@ class GameStateManager {
           unlockedCardIds: parsed.unlockedCardIds || [],
           completedUnits: parsed.completedUnits || [],
           unitHighScores: parsed.unitHighScores || {},
-          coins: parsed.coins !== undefined ? parsed.coins : (parsed.unlockedCardIds || []).length * 10,
+          coins: normalizeLoadedCoins(parsed),
           claimedQuestIds: parsed.claimedQuestIds || [],
+          earnedAchievementIds: parsed.earnedAchievementIds || [],
+          earnedTitles: parsed.earnedTitles || [],
+          unlockedBadges: parsed.unlockedBadges || [],
+          wrongAnswers: parsed.wrongAnswers || [],
+          gymLeaderBeaten: parsed.gymLeaderBeaten || {},
+          cardLevels: parsed.cardLevels || {},
+          cardXps: parsed.cardXps || {},
           items: {
             potion: parsed.items?.potion !== undefined ? parsed.items.potion : 3,
             magnifier: parsed.items?.magnifier !== undefined ? parsed.items.magnifier : 3,
@@ -374,6 +398,39 @@ class GameStateManager {
   getProgress(): GameProgress {
     this.ensureInitialized();
     return this.state.progress;
+  }
+
+  // ── 코인 단일 게이트웨이 (EPIC A) ────────────────────────────────
+  // 모든 코인 증감은 반드시 이 메서드들을 거친다. progress.coins가 유일한 진실 원천.
+
+  /** 현재 코인 잔액(항상 클램프된 정수). fallback 산식 없음. */
+  getCoins(): number {
+    this.ensureInitialized();
+    const coins = this.state.progress.coins;
+    return coins === undefined || Number.isNaN(coins) || coins < 0 ? 0 : Math.floor(coins);
+  }
+
+  /** 마일스톤/보상 코인 지급. source는 감사/추적용. */
+  awardCoins(amount: number, _source?: CoinSource): number {
+    this.ensureInitialized();
+    this.state.progress.coins = applyAward(this.getCoins(), amount);
+    this.save();
+    return this.state.progress.coins;
+  }
+
+  /** 코인 차감. 잔액 부족 시 false 반환(차감하지 않음). */
+  spendCoins(amount: number): boolean {
+    this.ensureInitialized();
+    const next = applySpend(this.getCoins(), amount);
+    if (next < 0) return false;
+    this.state.progress.coins = next;
+    this.save();
+    return true;
+  }
+
+  /** 구매 가능 여부 조회(상태 변경 없음). */
+  canAffordCoins(cost: number): boolean {
+    return canAfford(this.getCoins(), cost);
   }
 
   getSoundOn(): boolean {
@@ -588,18 +645,8 @@ class GameStateManager {
   }
 
   checkMilestones(unitId: number, score: number) {
-    if (score >= 8) { // 80점 이상 획득 시 해금
-      const cosmeticMap: Record<number, string> = {
-        1: 'outfit_explorer',
-        2: 'accessory_magnifier',
-        3: 'accessory_beaker',
-        4: 'outfit_gown',
-        5: 'accessory_aura',
-        6: 'expression_fire',
-        7: 'outfit_spacesuit',
-        8: 'outfit_crown',
-      };
-      const unlockable = cosmeticMap[unitId];
+    if (score >= 8) { // 80% 이상 획득 시 단원 마일스톤 코스튬 해금 (카탈로그 실재 ID — D4)
+      const unlockable = UNIT_MILESTONE_COSTUME_IDS[unitId];
       if (unlockable) {
         this.unlockCosmetic(unlockable);
       }
@@ -610,8 +657,13 @@ class GameStateManager {
     const progress = this.state.progress;
     if (!progress.unlockedCardIds.includes(cardId)) {
       progress.unlockedCardIds = [...progress.unlockedCardIds, cardId];
-      progress.coins = (progress.coins !== undefined ? progress.coins : (progress.unlockedCardIds.length - 1) * 10) + 30;
+      // 카드 해금의 보상은 카드 그 자체. 코인은 지급하지 않는다. (PRD EPIC A)
       this.save();
+      // 카드 수집/레벨 업적 평가 (보상 지급 중 재귀 방지)
+      if (!this.isGrantingReward) {
+        this.triggerAchievementEvent({ type: 'questions_correct', val: progress.unlockedCardIds.length });
+        this.triggerAchievementEvent({ type: 'level', val: this.getTrainerInfo().level });
+      }
       return true; // Newly unlocked
     }
     return false; // Already unlocked
@@ -619,22 +671,38 @@ class GameStateManager {
 
   completeUnit(unitId: number, score: number) {
     const progress = this.state.progress;
-    
-    if (!progress.completedUnits.includes(unitId)) {
+
+    // 마일스톤 판정을 위해 변경 전 상태를 먼저 캡처한다.
+    const isFirstClear = !progress.completedUnits.includes(unitId);
+    const prevHighScore = progress.unitHighScores[unitId] || 0;
+
+    if (isFirstClear) {
       progress.completedUnits = [...progress.completedUnits, unitId];
     }
-    
-    const currentHighScore = progress.unitHighScores[unitId] || 0;
-    if (score > currentHighScore) {
+
+    if (score > prevHighScore) {
       progress.unitHighScores = {
         ...progress.unitHighScores,
         [unitId]: score,
       };
     }
-    
-    progress.coins = (progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10) + (score * 10);
+
+    // 마일스톤 코인 (EPIC A): 최초 완료 보너스 + 신기록 갱신 보너스(증가분 비례).
+    // 반복 플레이로는 신기록을 못 깨므로 코인이 늘지 않아 farming이 차단된다.
+    let milestoneCoins = 0;
+    if (isFirstClear) milestoneCoins += firstClearBonus();
+    milestoneCoins += highScoreBonus(prevHighScore, score);
+    if (milestoneCoins > 0) {
+      this.awardCoins(milestoneCoins, isFirstClear ? 'first_unit_clear' : 'new_high_score');
+    }
+
     this.checkMilestones(unitId, score);
     this.save();
+
+    // 업적 평가: 단원 완료 / 카드 수집 / 트레이너 레벨
+    this.triggerAchievementEvent({ type: 'unit_complete', val: unitId });
+    this.triggerAchievementEvent({ type: 'questions_correct', val: progress.unlockedCardIds.length });
+    this.triggerAchievementEvent({ type: 'level', val: this.getTrainerInfo().level });
   }
 
   checkCardUnlocked(cardId: string): boolean {
@@ -715,29 +783,23 @@ class GameStateManager {
   purchaseItem(type: keyof ItemInventory, cost: number, amount: number): boolean {
     this.ensureInitialized();
     const progress = this.state.progress;
-    const currentCoins = progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10;
-    
-    if (currentCoins >= cost) {
-      progress.coins = currentCoins - cost;
-      
-      if (!progress.items) {
-        progress.items = {
-          potion: 3, magnifier: 3, watch: 3,
-          superBall: 0, ultraBall: 0, masterBall: 0,
-          potionHyper: 0, potionMax: 0, revive: 0
-        };
-      }
-      progress.items = {
-        ...progress.items,
-        [type]: (progress.items[type] || 0) + amount
-      };
-      
-      this.save();
 
-      // Trigger quest update check if necessary
-      return true;
+    if (!this.spendCoins(cost)) return false; // 잔액 부족 시 차감 없이 실패
+
+    if (!progress.items) {
+      progress.items = {
+        potion: 3, magnifier: 3, watch: 3,
+        superBall: 0, ultraBall: 0, masterBall: 0,
+        potionHyper: 0, potionMax: 0, revive: 0
+      };
     }
-    return false;
+    progress.items = {
+      ...progress.items,
+      [type]: (progress.items[type] || 0) + amount
+    };
+
+    this.save();
+    return true;
   }
 
   claimQuestReward(questId: string, coinReward: number) {
@@ -748,8 +810,7 @@ class GameStateManager {
     }
     if (!progress.claimedQuestIds.includes(questId)) {
       progress.claimedQuestIds = [...progress.claimedQuestIds, questId];
-      progress.coins = (progress.coins !== undefined ? progress.coins : progress.unlockedCardIds.length * 10) + coinReward;
-      this.save();
+      this.awardCoins(coinReward, 'quest_reward');
     }
   }
 
@@ -760,6 +821,8 @@ class GameStateManager {
       unitHighScores: {},
       coins: 0,
       claimedQuestIds: [],
+      earnedAchievementIds: [],
+      earnedTitles: [],
       items: {
         potion: 3,
         magnifier: 3,
@@ -798,6 +861,10 @@ class GameStateManager {
   unlockBadge(unitId: number) {
     this.ensureInitialized();
     const progress = this.state.progress;
+
+    // 최초 격파 여부를 변경 전 캡처 (마일스톤 코인 판정용).
+    const isFirstGymClear = !progress.gymLeaderBeaten?.[unitId];
+
     if (!progress.unlockedBadges) {
       progress.unlockedBadges = [];
     }
@@ -810,6 +877,12 @@ class GameStateManager {
       progress.gymLeaderBeaten = {};
     }
     progress.gymLeaderBeaten[unitId] = true;
+
+    // 체육관 관장 최초 격파 시에만 마일스톤 코인 지급. (EPIC A)
+    if (isFirstGymClear) {
+      this.awardCoins(gymFirstClearBonus(), 'gym_first_clear');
+    }
+
     this.save();
   }
 
@@ -841,13 +914,22 @@ class GameStateManager {
 
   getLocalPlayer(): Player {
     this.ensureInitialized();
-    
+
+    // D8: 레벨/XP/코인은 항상 통합 산식에서 파생 — 저장본을 로드해도 이 값으로 덮어쓴다.
+    const info = deriveProgression(this.state.progress);
+
     // Attempt load from localStorage first
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('science_pokedex_player');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const player = JSON.parse(saved) as Player;
+          // 저장본의 stale한 level/xp/coins를 신선한 파생값으로 정합화.
+          player.level = info.level;
+          player.xp = info.xp;
+          player.coins = this.getCoins();
+          player.achievements = this.state.progress.earnedAchievementIds ?? [];
+          return player;
         } catch (e) {}
       }
     }
@@ -869,12 +951,12 @@ class GameStateManager {
         petId: this.state.equippedCosmetics.petId || null
       },
       position: { x: 400, y: 300 },
-      xp: this.state.progress.completedUnits.length * 100,
-      level: Math.max(1, Math.floor((this.state.progress.completedUnits.length * 100) / 100) + 1),
-      coins: this.state.progress.coins !== undefined ? this.state.progress.coins : this.state.progress.unlockedCardIds.length * 10,
+      xp: info.xp,
+      level: info.level,
+      coins: this.getCoins(),
       unlockedCards: this.state.progress.unlockedCardIds,
       unlockedCostumes: this.state.unlockedCosmetics as CostumeId[],
-      achievements: []
+      achievements: this.state.progress.earnedAchievementIds ?? []
     };
   }
 
@@ -915,13 +997,58 @@ class GameStateManager {
     return costumeCatalog.filter(item => player.unlockedCostumes.includes(item.id));
   }
 
-  checkAchievements(player: Player, event: { type: string; val: number }): Achievement[] {
+  /** 획득한 업적 ID 목록(영속). */
+  getEarnedAchievementIds(): string[] {
+    this.ensureInitialized();
+    if (!this.state.progress.earnedAchievementIds) {
+      this.state.progress.earnedAchievementIds = [];
+    }
+    return this.state.progress.earnedAchievementIds;
+  }
+
+  /** 업적 보상 지급 (costume/coins/card/title 전부 처리 — D3). 재귀 방지 가드 사용. */
+  private grantAchievementReward(ach: Achievement): void {
+    const reward = ach.reward;
+    this.isGrantingReward = true;
+    try {
+      if (reward.type === 'costume') {
+        this.unlockCosmetic(reward.costumeId);
+      } else if (reward.type === 'coins') {
+        this.awardCoins(reward.amount, 'achievement_reward');
+      } else if (reward.type === 'card') {
+        this.unlockCard(reward.cardId);
+      } else if (reward.type === 'title') {
+        // 칭호 텍스트를 영속 저장하고, 동일 이름의 카탈로그 칭호가 있으면 해금한다.
+        const progress = this.state.progress;
+        if (!progress.earnedTitles) progress.earnedTitles = [];
+        if (!progress.earnedTitles.includes(reward.titleText)) {
+          progress.earnedTitles = [...progress.earnedTitles, reward.titleText];
+        }
+        const matchingTitle = costumeCatalog.find(
+          c => c.category === 'title' && c.name === reward.titleText
+        );
+        if (matchingTitle) this.unlockCosmetic(matchingTitle.id);
+      }
+    } finally {
+      this.isGrantingReward = false;
+    }
+  }
+
+  /**
+   * 업적 이벤트를 평가하여 새로 달성한 업적을 영속 기록·보상하고 반환한다. (D2)
+   * 호출 지점: completeUnit/unlockCard(내부 자동), QuizScreen(streak), BossRaidScreen(boss_damage).
+   */
+  triggerAchievementEvent(event: { type: string; val: number }): Achievement[] {
+    this.ensureInitialized();
+    const progress = this.state.progress;
+    if (!progress.earnedAchievementIds) progress.earnedAchievementIds = [];
+
     const newlyEarned: Achievement[] = [];
-    const unlockedCards = this.state.progress.unlockedCardIds;
-    const completedUnits = this.state.progress.completedUnits;
+    const unlockedCards = progress.unlockedCardIds;
+    const completedUnits = progress.completedUnits;
 
     ACHIEVEMENTS_LIST.forEach(ach => {
-      if (player.achievements.includes(ach.id)) return;
+      if (progress.earnedAchievementIds!.includes(ach.id)) return;
 
       let met = false;
       const cond = ach.condition;
@@ -929,35 +1056,43 @@ class GameStateManager {
       if (cond.type === 'streak' && event.type === 'streak') {
         met = event.val >= cond.count;
       } else if (cond.type === 'unit_complete' && event.type === 'unit_complete') {
-        if (cond.unitId === 0) {
-          // 특별: 모든 8단원 완료
-          met = completedUnits.length >= 8;
-        } else {
-          met = event.val === cond.unitId;
-        }
+        met = cond.unitId === 0 ? completedUnits.length >= 8 : event.val === cond.unitId;
       } else if (cond.type === 'level' && event.type === 'level') {
         met = event.val >= cond.level;
-      } else if (cond.type === 'questions_correct') {
-        // 카드 수집 마일스톤 — 해금된 카드 수로 판단
+      } else if (cond.type === 'questions_correct' && event.type === 'questions_correct') {
         met = unlockedCards.length >= cond.count;
       } else if (cond.type === 'boss_damage' && event.type === 'boss_damage') {
         met = event.val >= cond.total;
+      } else if (cond.type === 'battles_won' && event.type === 'battles_won') {
+        met = event.val >= cond.count;
       }
 
       if (met) {
+        progress.earnedAchievementIds!.push(ach.id);
+        this.grantAchievementReward(ach);
         newlyEarned.push(ach);
-
-        // 코스튬/타이틀 보상 즉시 지급
-        if (ach.reward.type === 'costume') {
-          this.unlockCosmetic(ach.reward.costumeId);
-        } else if (ach.reward.type === 'coins') {
-          const progress = this.state.progress;
-          progress.coins = (progress.coins ?? 0) + ach.reward.amount;
-        }
       }
     });
 
+    if (newlyEarned.length > 0) {
+      this.save();
+      if (typeof window !== 'undefined') {
+        newlyEarned.forEach(ach => {
+          window.dispatchEvent(
+            new CustomEvent('react:achievementUnlocked', {
+              detail: { id: ach.id, name: ach.name, icon: ach.icon, description: ach.description }
+            })
+          );
+        });
+      }
+    }
+
     return newlyEarned;
+  }
+
+  /** @deprecated 하위 호환용. player 인자는 무시되고 triggerAchievementEvent로 위임된다. */
+  checkAchievements(_player: Player, event: { type: string; val: number }): Achievement[] {
+    return this.triggerAchievementEvent(event);
   }
 
   getCardPower(cardId: string): number {
@@ -1064,72 +1199,22 @@ class GameStateManager {
   getTrainerInfo() {
     this.ensureInitialized();
     const progress = this.state.progress;
-    
-    const cardCount = progress.unlockedCardIds.length;
-    let cardLevelsSum = 0;
-    if (progress.cardLevels) {
-      Object.values(progress.cardLevels).forEach(lvl => {
-        cardLevelsSum += (lvl - 1);
-      });
-    }
 
-    const completedCount = progress.completedUnits.length;
-    const trainerXp = (cardCount * 100) + (cardLevelsSum * 50) + (completedCount * 100);
-    
-    let trainerLevel = 1;
-    let rank = '초보 과학 트레이너 ⚪';
-    let nextThreshold = 300;
-    let prevThreshold = 0;
+    // D8: 통합 산식(lib/progression.ts)이 유일한 진실 원천.
+    const info = deriveProgression(progress);
 
-    if (trainerXp >= 4000) {
-      trainerLevel = 6;
-      rank = '과학 마스터 챔피언 🏆';
-      nextThreshold = 999999;
-      prevThreshold = 4000;
-    } else if (trainerXp >= 2500) {
-      trainerLevel = 5;
-      rank = '체육관 관장 트레이너 👑';
-      nextThreshold = 4000;
-      prevThreshold = 2500;
-    } else if (trainerXp >= 1500) {
-      trainerLevel = 4;
-      rank = '베테랑 과학 트레이너 🔮';
-      nextThreshold = 2500;
-      prevThreshold = 1500;
-    } else if (trainerXp >= 800) {
-      trainerLevel = 3;
-      rank = '엘리트 과학 트레이너 ⚡';
-      nextThreshold = 1500;
-      prevThreshold = 800;
-    } else if (trainerXp >= 300) {
-      trainerLevel = 2;
-      rank = '견습 과학 트레이너 🌱';
-      nextThreshold = 800;
-      prevThreshold = 300;
-    }
+    progress.trainerLevel = info.level;
+    progress.trainerXp = info.xp;
 
-    progress.trainerLevel = trainerLevel;
-    progress.trainerXp = trainerXp;
-
-    return {
-      level: trainerLevel,
-      xp: trainerXp,
-      rank,
-      prevThreshold,
-      nextThreshold
-    };
+    return info;
   }
 
   calculateCP(
-    unlockedCardIds: string[], 
+    unlockedCardIds: string[],
     equippedCosmetics: { outfit: string; expression: string; accessory: string; mount: string; hat?: string; badge?: string; title?: string; petId?: string }
   ): number {
-    const PokedexCount = unlockedCardIds.length;
     const unlockedCardsData = cards.filter(c => unlockedCardIds.includes(c.id));
-    const sortedPowers = unlockedCardsData
-      .map(c => c.power || c.attack || 20)
-      .sort((a, b) => b - a);
-    const top2Sum = (sortedPowers[0] || 0) + (sortedPowers[1] || 0);
+    const powers = unlockedCardsData.map(c => c.power || c.attack || 20);
 
     let equippedStatsSum = 0;
     const itemsToSum = [
@@ -1149,15 +1234,13 @@ class GameStateManager {
       }
     });
 
-    let cardLevelsBonus = 0;
-    const progress = this.getProgress();
-    if (progress.cardLevels) {
-      Object.values(progress.cardLevels).forEach(lvl => {
-        cardLevelsBonus += (lvl - 1) * 20;
-      });
-    }
-
-    return (PokedexCount * 50) + top2Sum + (equippedStatsSum * 10) + cardLevelsBonus;
+    // D8: CP 가중치도 lib/progression.ts 1곳. 여기서는 데이터만 해석한다.
+    return deriveCp({
+      unlockedCardCount: unlockedCardIds.length,
+      topTwoPowerSum: topTwoPowerSum(powers),
+      equippedStatsSum,
+      cardLevelSteps: sumCardLevelSteps(this.getProgress().cardLevels),
+    });
   }
 }
 
@@ -1244,6 +1327,10 @@ export function useGameState() {
     gainItem: (type: keyof ItemInventory, amount: number) => gameStateManager.gainItem(type, amount),
     purchaseItem: (type: keyof ItemInventory, cost: number, amount: number) => gameStateManager.purchaseItem(type, cost, amount),
     claimQuestReward: (questId: string, coinReward: number) => gameStateManager.claimQuestReward(questId, coinReward),
+    getCoins: () => gameStateManager.getCoins(),
+    awardCoins: (amount: number, source?: CoinSource) => gameStateManager.awardCoins(amount, source),
+    spendCoins: (amount: number) => gameStateManager.spendCoins(amount),
+    canAffordCoins: (cost: number) => gameStateManager.canAffordCoins(cost),
     calculateCP: (
       unlockedCardIds: string[], 
       equippedCosmetics: { outfit: string; expression: string; accessory: string; mount: string; hat?: string; badge?: string; title?: string; petId?: string }
@@ -1256,6 +1343,8 @@ export function useGameState() {
     setCurrentQuizSession: (session: ClassroomSession | null) => gameStateManager.setCurrentQuizSession(session),
     getCostumeInventory: (player: Player) => gameStateManager.getCostumeInventory(player),
     checkAchievements: (player: Player, event: { type: string; val: number }) => gameStateManager.checkAchievements(player, event),
+    triggerAchievementEvent: (event: { type: string; val: number }) => gameStateManager.triggerAchievementEvent(event),
+    getEarnedAchievementIds: () => gameStateManager.getEarnedAchievementIds(),
     getCardPower: (cardId: string) => gameStateManager.getCardPower(cardId),
     getCardEvolution: (cardId: string, level: number) => gameStateManager.getCardEvolution(cardId, level),
     gainCardXp: (cardIds: string[], amount: number) => gameStateManager.gainCardXp(cardIds, amount),
