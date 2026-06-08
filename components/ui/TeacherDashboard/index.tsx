@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { gameAudio } from '../../../lib/audio';
 import { ClassroomSession, StudentResponse, DashboardEvent, PlayerDashboardEntry } from '../../../types';
 import { getUnitTitle, SIMULATED_CLASSMATES } from '../../../data/questions';
-import { Users, Moon, Sun, Trophy } from 'lucide-react';
+import { Users, Moon, Sun, Trophy, RefreshCw } from 'lucide-react';
 import { supabase, IS_OFFLINE_MODE } from '../../../lib/supabase/client';
 import { RenderAvatarPreview } from '../AvatarPreview';
 import StudentGrid from './StudentGrid';
@@ -43,6 +43,8 @@ export default function TeacherDashboard({
   const [detailedStudent, setDetailedStudent] = useState<PlayerDashboardEntry | null>(null);
   const [feedEvents, setFeedEvents] = useState<DashboardEvent[]>([]);
   const [lastDbUpdate, setLastDbUpdate] = useState<string>('방금 전');
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<boolean>(false);
   const [googleSyncState, setGoogleSyncState] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -137,56 +139,74 @@ export default function TeacherDashboard({
     return () => { presenceChannel.unsubscribe(); };
   }, [sessionCode, classroomSession]);
 
-  // DB polling every 10s
-  useEffect(() => {
+  // DB 폴링 함수 — 10초 자동 폴링과 수동 새로고침 버튼이 공유한다 (A-1).
+  // try/finally로 로딩 상태·갱신 시각을 항상 정리하고, 실패는 가시화한다 (A-2/D7).
+  const fetchSessionData = useCallback(async () => {
     if (!sessionCode) return;
-    const fetchSessionData = async () => {
-      try {
-        const { data: dbPlayers, error: playersError } = await supabase.from('players').select('*').eq('session_code', sessionCode);
-        if (playersError || !dbPlayers) return;
+    setIsRefreshing(true);
+    setSyncError(false);
+    try {
+      const { data: dbPlayers, error: playersError } = await supabase.from('players').select('*').eq('session_code', sessionCode);
+      if (!playersError && dbPlayers) {
         const { data: dbAnswers } = await supabase.from('quiz_answers').select('*').eq('session_code', sessionCode);
         const currentSession = sessionRef.current;
-        if (!currentSession) return;
-        const activeUnitId = currentSession.activeUnitId;
-        type DbPlayer = { id: string; nickname: string; avatar?: { gender?: string; outfit?: string; expression?: string; accessory?: string; vehicle?: string }; position?: { x?: number; y?: number }; xp?: number };
-        type DbAnswer = { player_id: string; unit_id: number; is_correct: boolean; id: number };
-        const updatedRealStudents = (dbPlayers as DbPlayer[]).map(p => {
-          const playerAnswers = ((dbAnswers || []) as DbAnswer[]).filter(a => a.player_id === p.id && a.unit_id === activeUnitId);
-          const correctAnswers = playerAnswers.filter(a => a.is_correct);
-          const sortedAnswers = [...playerAnswers].sort((a, b) => a.id - b.id);
-          let currentStreak = 0;
-          for (let i = sortedAnswers.length - 1; i >= 0; i--) {
-            if (sortedAnswers[i].is_correct) currentStreak++;
-            else break;
-          }
-          const existingStudent = currentSession.students.find(s => s.name === p.nickname);
-          return {
-            name: p.nickname,
-            avatar: existingStudent?.avatar || '🔬',
-            isSimulated: false,
-            currentScore: correctAnswers.length,
-            currentStreak,
-            answeredCurrentQuestion: playerAnswers.length > 0,
-            lastAnswerCorrect: sortedAnswers[sortedAnswers.length - 1]?.is_correct,
-            x: existingStudent?.x || p.position?.x || 20,
-            y: existingStudent?.y || p.position?.y || 15,
-            equippedCosmetics: { outfit: p.avatar?.outfit || 'none', expression: p.avatar?.expression || 'none', accessory: p.avatar?.accessory || 'none', mount: p.avatar?.vehicle || 'none' },
-            cp: p.xp || 0,
-          };
-        });
-        const simulatedStudents = currentSession.students.filter(s => s.isSimulated);
-        const mergedStudents: ClassroomSession['students'] = updatedRealStudents as ClassroomSession['students'];
-        simulatedStudents.forEach(sim => { if (!mergedStudents.some(s => s.name === sim.name)) mergedStudents.push(sim); });
-        setClassroomSession({ ...currentSession, students: mergedStudents });
-        setLastDbUpdate(new Date().toLocaleTimeString('ko-KR'));
-      } catch (e) {
-        console.error('Failed to sync student activity records:', e);
+        if (currentSession) {
+          const activeUnitId = currentSession.activeUnitId;
+          type DbPlayer = { id: string; nickname: string; avatar?: { gender?: string; outfit?: string; expression?: string; accessory?: string; vehicle?: string }; position?: { x?: number; y?: number }; xp?: number };
+          type DbAnswer = { player_id: string; unit_id: number; is_correct: boolean; id: number };
+          const updatedRealStudents = (dbPlayers as DbPlayer[]).map(p => {
+            const playerAnswers = ((dbAnswers || []) as DbAnswer[]).filter(a => a.player_id === p.id && a.unit_id === activeUnitId);
+            const correctAnswers = playerAnswers.filter(a => a.is_correct);
+            const sortedAnswers = [...playerAnswers].sort((a, b) => a.id - b.id);
+            let currentStreak = 0;
+            for (let i = sortedAnswers.length - 1; i >= 0; i--) {
+              if (sortedAnswers[i].is_correct) currentStreak++;
+              else break;
+            }
+            const existingStudent = currentSession.students.find(s => s.name === p.nickname);
+            return {
+              name: p.nickname,
+              avatar: existingStudent?.avatar || '🔬',
+              isSimulated: false,
+              currentScore: correctAnswers.length,
+              currentStreak,
+              answeredCurrentQuestion: playerAnswers.length > 0,
+              lastAnswerCorrect: sortedAnswers[sortedAnswers.length - 1]?.is_correct,
+              x: existingStudent?.x || p.position?.x || 20,
+              y: existingStudent?.y || p.position?.y || 15,
+              equippedCosmetics: { outfit: p.avatar?.outfit || 'none', expression: p.avatar?.expression || 'none', accessory: p.avatar?.accessory || 'none', mount: p.avatar?.vehicle || 'none' },
+              cp: p.xp || 0,
+            };
+          });
+          const simulatedStudents = currentSession.students.filter(s => s.isSimulated);
+          const mergedStudents: ClassroomSession['students'] = updatedRealStudents as ClassroomSession['students'];
+          simulatedStudents.forEach(sim => { if (!mergedStudents.some(s => s.name === sim.name)) mergedStudents.push(sim); });
+          setClassroomSession({ ...currentSession, students: mergedStudents });
+        }
       }
-    };
+    } catch (e) {
+      console.error('Failed to sync student activity records:', e);
+      setSyncError(true);
+    } finally {
+      setLastDbUpdate(new Date().toLocaleTimeString('ko-KR'));
+      setIsRefreshing(false);
+    }
+  }, [sessionCode, setClassroomSession]);
+
+  // 10초 자동 폴링
+  useEffect(() => {
+    if (!sessionCode) return;
     fetchSessionData();
     const intervalId = setInterval(fetchSessionData, 10000);
     return () => clearInterval(intervalId);
-  }, [sessionCode]);
+  }, [sessionCode, fetchSessionData]);
+
+  // 수동 새로고침: DB 폴링 + Presence 재-sync 강제 (A-1/A-4)
+  const handleManualRefresh = useCallback(() => {
+    if (isRefreshing) return;
+    gameAudio.playClick();
+    void fetchSessionData();
+  }, [isRefreshing, fetchSessionData]);
 
   // AI 봇 자동 응답 시뮬레이션 — 퀴즈 진행 중 800ms마다 일부 봇이 답변
   useEffect(() => {
@@ -369,6 +389,27 @@ export default function TeacherDashboard({
           }`}>
             상태: {classroomSession ? (classroomSession.status === 'playing' ? '퀴즈 풀이 중' : (classroomSession.status as string) === 'raid' ? '레이드 진행 중' : classroomSession.status.toUpperCase()) : 'OFFLINE'}
           </div>
+          {/* 실시간 모니터링 새로고침 (A-1/A-2/D7) */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="학생 활동을 즉시 동기화합니다"
+            aria-label="학생 활동 새로고침"
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-950 border border-gray-850 hover:border-cyan-500/50 rounded-lg text-xs font-mono text-gray-300 hover:text-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                syncError ? 'bg-red-500 animate-pulse'
+                : IS_OFFLINE_MODE ? 'bg-amber-400'
+                : 'bg-emerald-400'
+              }`}
+              aria-hidden="true"
+            />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+            <span className="hidden sm:inline">
+              {isRefreshing ? '동기화 중…' : `갱신 ${lastDbUpdate}`}
+            </span>
+          </button>
           {toggleTheme && (
             <button onClick={toggleTheme} className="w-11 h-11 border border-gray-800 bg-gray-950 hover:bg-gray-900 text-gray-400 hover:text-cyan-400 rounded-lg flex items-center justify-center transition-all">
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}

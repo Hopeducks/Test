@@ -6,7 +6,7 @@ import { gameAudio } from '../../../lib/audio';
 import { ClassroomSession, DashboardEvent, TournamentMatch, TournamentBracket } from '../../../types';
 import TournamentBracketView from '../TournamentBracketView';
 import AnswerDistributionPanel from './AnswerDistributionPanel';
-import { getUnitTitle } from '../../../data/questions';
+import { getUnitTitle, getUnitQuestions } from '../../../data/questions';
 import { questions } from '../../../data/questions';
 import { cards } from '../../../data/cards';
 import { supabase } from '../../../lib/supabase-client';
@@ -58,7 +58,21 @@ export default function ControlPanels({
 
   const handleStartQuiz = () => {
     gameAudio.playClick();
-    setClassroomSession({ ...classroomSession, status: 'playing', currentQuestionIndex: 0, questionStartTime: Date.now() });
+    // D2 수정: 출제 10문항 ID를 세션에 기록해야 AnswerDistributionPanel이
+    // 문항별 선택지 분포를 정확히 집계한다. 학생 QuizScreen 셔플 규약과 동일
+    // (getUnitQuestions → 셔플 → 10개 슬라이스).
+    const pool = getUnitQuestions(classroomSession.activeUnitId);
+    const questionIds = [...pool]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 10)
+      .map(q => q.id);
+    setClassroomSession({
+      ...classroomSession,
+      status: 'playing',
+      currentQuestionIndex: 0,
+      questionStartTime: Date.now(),
+      questionIds,
+    });
   };
 
   const handleStopQuiz = () => {
