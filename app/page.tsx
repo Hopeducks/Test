@@ -85,6 +85,10 @@ export default function Home() {
       const local = getLocalPlayer();
       if (local) setPlayer(local);
       setActiveScreen('raid');
+    } else if (e2eParam === 'unitcomplete') {
+      setQuizScore(8);
+      setNewlyUnlockedCards([]);
+      setActiveScreen('complete');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
