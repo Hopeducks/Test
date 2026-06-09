@@ -89,6 +89,8 @@ export default function Home() {
       setQuizScore(8);
       setNewlyUnlockedCards([]);
       setActiveScreen('complete');
+    } else if (e2eParam === 'pokedex') {
+      setActiveScreen('pokedex');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
