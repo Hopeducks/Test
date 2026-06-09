@@ -121,10 +121,10 @@ export default function LobbySidebar({
             <span>학습 대원:</span>
             <span className="text-white font-bold">{localStudents.length} 명 접속</span>
           </div>
-          <div className="flex justify-between">
-            <span>보유 재화:</span>
-            <span className="text-amber-450 font-black text-gray-250 flex items-center gap-1.5">
-              🪙 {progress.coins ?? 0} 코인
+          <div className="flex justify-between items-center">
+            <span>보유 코인:</span>
+            <span className="font-black text-amber-300 flex items-center gap-1.5 bg-amber-950/40 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+              🪙 {progress.coins ?? 0}
             </span>
           </div>
         </div>

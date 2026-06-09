@@ -181,32 +181,28 @@ export default function AvatarCustomizer({ onClose }: AvatarCustomizerProps) {
       unlockedCostumes: updatedUnlockedCostumes,
     };
 
+    // Try Supabase silently — offline-safe (same pattern as handleConfirm)
     try {
-      // Update DB
-      const { error } = await supabase
+      await supabase
         .from('players')
         .update({
           coins: updatedCoins,
           unlocked_costumes: updatedUnlockedCostumes,
         })
         .eq('id', player.id);
-
-      if (error) throw error;
-
-      setPlayer(updatedPlayer);
-      setLocalPlayer(updatedPlayer);
-      setSelectedItems(prev => ({
-        ...prev,
-        [item.category]: item.id
-      }));
-      setMessage({ text: `${item.name}을(를) 성공적으로 구매하여 장착했습니다!`, isError: false });
     } catch (err) {
-      console.error(err);
-      setMessage({ text: '구매 처리 중 오류가 발생했습니다.', isError: true });
-    } finally {
-      setLoading(false);
-      setPurchaseConfirmItem(null);
+      console.warn('Supabase unreachable, saving locally only', err);
     }
+
+    // Always apply locally regardless of Supabase result
+    setPlayer(updatedPlayer);
+    setLocalPlayer(updatedPlayer);
+    // Auto-equip the purchased item (pet uses petId key, others use category key)
+    const equippedKey = item.category === 'pet' ? 'petId' : item.category;
+    setSelectedItems(prev => ({ ...prev, [equippedKey]: item.id }));
+    setMessage({ text: `✅ ${item.name}을(를) 구매하여 장착했습니다!`, isError: false });
+    setLoading(false);
+    setPurchaseConfirmItem(null);
   };
 
   // Select body color preset
@@ -389,9 +385,12 @@ export default function AvatarCustomizer({ onClose }: AvatarCustomizerProps) {
               </div>
 
               {/* Coins Balance HUD */}
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/40 border border-amber-500/30 rounded-lg text-amber-400 font-bold text-sm">
-                <Coins className="w-4 h-4 animate-pulse" />
-                <span className="font-mono">{player.coins}</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-400 font-bold">
+                <Coins className="w-4 h-4 shrink-0" />
+                <div>
+                  <div className="text-[9px] text-amber-700 font-mono leading-none">보유 코인</div>
+                  <div className="text-sm font-black font-mono leading-none">{player.coins}</div>
+                </div>
               </div>
             </div>
 
@@ -640,21 +639,20 @@ export default function AvatarCustomizer({ onClose }: AvatarCustomizerProps) {
                         {/* Equip / Shop price badge */}
                         <div className="w-full z-10">
                           {isEquipped ? (
-                            <span className="text-[9px] font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-1.5 py-0.5 rounded block">
-                              장착 완료
+                            <span className="text-[9px] font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-1.5 py-0.5 rounded block text-center">
+                              ✓ 장착 중
                             </span>
                           ) : unlocked ? (
-                            <span className="text-[9px] text-gray-500 group-hover:text-cyan-400/80 block py-0.5">
+                            <span className="text-[9px] text-gray-500 group-hover:text-cyan-400 block py-0.5 text-center transition-colors">
                               장착하기
                             </span>
                           ) : item.price !== undefined ? (
-                            <div className="w-full py-1 bg-amber-500 group-hover:bg-amber-400 text-black font-black rounded text-[10px] flex items-center justify-center gap-0.5 transition-all shadow-[0_2px_4px_rgba(245,158,11,0.2)]">
-                              <Coins className="w-2.5 h-2.5" />
-                              <span>{item.price}</span>
+                            <div className="w-full py-1 bg-amber-500 group-hover:bg-amber-400 text-black font-black rounded text-[10px] flex items-center justify-center gap-0.5 transition-all shadow-[0_2px_6px_rgba(245,158,11,0.3)]">
+                              🪙 <span>{item.price}</span>
                             </div>
                           ) : (
-                            <span className="text-[8px] text-gray-500 font-bold block py-0.5">
-                              잠금 상태
+                            <span className="text-[8px] text-gray-600 font-bold block py-0.5 text-center">
+                              🔒 조건 잠금
                             </span>
                           )}
                         </div>

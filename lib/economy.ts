@@ -20,14 +20,15 @@ export type CoinSource =
   | 'achievement_reward' // 업적 최초 달성
   | 'migration';         // 레거시 데이터 1회 보정
 
-/** 마일스톤 코인 지급 정책 (단일 진실 원천). */
+/** 마일스톤 코인 지급 정책 (단일 진실 원천).
+ *  도전의식 유지를 위해 의도적으로 희소하게 설계. */
 export const COIN_POLICY = {
   /** 단원 최초 완료 시 지급. */
-  firstUnitClear: 50,
+  firstUnitClear: 25,
   /** 신기록 갱신 시 향상된 점수 1점(10점 척도)당 지급. */
-  highScorePerPoint: 8,
+  highScorePerPoint: 4,
   /** 체육관 관장 최초 격파 시 지급. */
-  gymFirstClear: 60,
+  gymFirstClear: 30,
 } as const;
 
 /**

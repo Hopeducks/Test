@@ -8,13 +8,13 @@ export const PRESET_BODY_COLORS = [
 ];
 
 export const CATEGORY_LABELS = {
-  outfit: '의상',
-  accessory: '악세서리',
-  vehicle: '탈것',
-  hat: '모자',
-  badge: '배지',
-  title: '칭호',
-  pet: '펫',
+  outfit: '🥼 의상',
+  accessory: '💎 악세서리',
+  vehicle: '🚀 탈것',
+  hat: '🎓 모자',
+  badge: '🎖 배지',
+  title: '👑 칭호',
+  pet: '🐾 펫',
 };
 
 // Item category emojis for preview
