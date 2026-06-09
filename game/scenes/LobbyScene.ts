@@ -258,6 +258,7 @@ export default class LobbyScene extends Phaser.Scene {
       { x: 16, y: 78, color: 0xec4899 }, // 센터
       { x: 104, y: 78, color: 0xf59e0b }, // 체육관
       { x: 60, y: 12, color: 0xf59e0b }, // 퀴즈
+      { x: 58, y: 30, color: 0x2dd4bf }, // 탐구 연구소
     ];
     zones.forEach((z) => {
       const mx = z.x * TILE_SIZE * this.minimapScale;
@@ -589,6 +590,7 @@ export default class LobbyScene extends Phaser.Scene {
         else if (zoneName === '도감 박물관') mappedZone = 'museum';
         else if (zoneName === '포켓몬 센터') mappedZone = 'center';
         else if (zoneName === '체육관') mappedZone = 'gym';
+        else if (zoneName === '탐구 연구소') mappedZone = 'lab';
 
         this.playPortalEnterEffect(
           this.playerContainer.x,

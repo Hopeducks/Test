@@ -28,6 +28,7 @@ const ZoneEntryPanel = dynamic(() => import('./ui/ZoneEntryPanel'), { ssr: false
 const TournamentBracketView = dynamic(() => import('./ui/TournamentBracketView'), { ssr: false });
 const LobbyEntryScreen = dynamic(() => import('./ui/lobby/LobbyEntryScreen'), { ssr: false });
 const LobbyQuestsPanel = dynamic(() => import('./ui/lobby/LobbyQuestsPanel'), { ssr: false });
+const LabScreen = dynamic(() => import('./ui/lobby/LabScreen'), { ssr: false });
 const LobbyShopModal = dynamic(() => import('./ui/lobby/LobbyShopModal'), { ssr: false });
 
 // Map Dimensions
@@ -91,6 +92,7 @@ export default function StudentLobby({
   const [activeSidebarTab, setActiveSidebarTab] = useState<'ranking' | 'quests'>('ranking');
   const [showCenterModal, setShowCenterModal] = useState(false);
   const [showGymModal, setShowGymModal] = useState(false);
+  const [showLabScreen, setShowLabScreen] = useState(false);
   const [showNpcQuest, setShowNpcQuest] = useState(false);
   const [activeNpcName, setActiveNpcName] = useState('');
   const [zoneEntry, setZoneEntry] = useState<{ unitId: number } | null>(null);
@@ -492,7 +494,7 @@ export default function StudentLobby({
     setSessionCode('');
   };
 
-  const handleZoneAction = (zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym', unitId?: number) => {
+  const handleZoneAction = (zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym' | 'lab', unitId?: number) => {
     if (zone === 'quiz') {
       const targetUnitId = unitId || chosenUnitId;
       const isLocked = targetUnitId > 1 && !progress.unlockedBadges?.includes(`accessory_badge_u${targetUnitId - 1}`);
@@ -519,6 +521,9 @@ export default function StudentLobby({
       setShowCenterModal(true);
     } else if (zone === 'gym') {
       setShowGymModal(true);
+    } else if (zone === 'lab') {
+      gameAudio.playClick();
+      setShowLabScreen(true);
     }
   };
 
@@ -955,6 +960,19 @@ export default function StudentLobby({
             setShowGymModal(false);
             setShowCenterModal(true);
           }}
+        />
+      )}
+
+      {showLabScreen && (
+        <LabScreen
+          progress={progress}
+          onStartQuiz={(unitId) => { setShowLabScreen(false); handleZoneAction('quiz', unitId); }}
+          onClaimDailyQuest={(questId, reward) => {
+            claimDailyQuestReward(questId, reward);
+            const local = getLocalPlayer();
+            if (local) setJoinedPlayer(local);
+          }}
+          onClose={() => setShowLabScreen(false)}
         />
       )}
 

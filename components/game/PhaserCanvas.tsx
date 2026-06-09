@@ -12,7 +12,7 @@ import { Swords, BookOpen, Orbit, X, Trophy, AlertTriangle, Heart, Shield } from
 interface PhaserCanvasProps {
   sessionCode: string;
   player: Player;
-  onZoneAction?: (zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym', unitId?: number) => void;
+  onZoneAction?: (zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym' | 'lab', unitId?: number) => void;
 }
 
 export default function PhaserCanvas({ sessionCode, player, onZoneAction }: PhaserCanvasProps) {
@@ -26,7 +26,7 @@ export default function PhaserCanvas({ sessionCode, player, onZoneAction }: Phas
   const presenceData = usePresence(sessionCode);
 
   // Modal overlay state triggered by portals
-  const [activeZoneModal, setActiveZoneModal] = useState<{ zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym'; unitId?: number } | null>(null);
+  const [activeZoneModal, setActiveZoneModal] = useState<{ zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym' | 'lab'; unitId?: number } | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   // 1. Sync React Presence Data to Phaser Scene
@@ -67,7 +67,7 @@ export default function PhaserCanvas({ sessionCode, player, onZoneAction }: Phas
   // 4. Listen to zone collisions and warnings dispatched from Phaser Scene
   useEffect(() => {
     const handleZoneEntered = (e: Event) => {
-      const customEvent = e as CustomEvent<{ zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym'; unitId?: number }>;
+      const customEvent = e as CustomEvent<{ zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym' | 'lab'; unitId?: number }>;
       const { zone, unitId } = customEvent.detail;
       gameAudio.playClick();
       setActiveZoneModal({ zone, unitId });
@@ -346,6 +346,32 @@ export default function PhaserCanvas({ sessionCode, player, onZoneAction }: Phas
                     className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black rounded text-xs transition-all shadow-[0_0_10px_rgba(245,158,11,0.3)]"
                   >
                     체육관 도전
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeZoneModal.zone === 'lab' && (
+              <div className="space-y-4">
+                <div className="w-12 h-12 bg-teal-950/50 border border-teal-500/30 rounded-lg flex items-center justify-center text-teal-400 mx-auto animate-pulse">
+                  <span className="text-2xl">🔬</span>
+                </div>
+                <h3 className="text-lg font-black text-teal-400">탐구 연구소 입장</h3>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  일일 탐구 미션을 확인하고 트레이너 진행 현황을 살펴보는 연구소입니다. 입장하시겠습니까?
+                </p>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setActiveZoneModal(null)}
+                    className="flex-1 py-2 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white rounded text-xs font-bold transition-all"
+                  >
+                    대기
+                  </button>
+                  <button
+                    onClick={handleModalConfirm}
+                    className="flex-1 py-2 bg-teal-600 hover:bg-teal-500 text-white font-black rounded text-xs transition-all shadow-[0_0_10px_rgba(45,212,191,0.3)]"
+                  >
+                    연구소 입장
                   </button>
                 </div>
               </div>

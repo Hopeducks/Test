@@ -211,6 +211,7 @@ export function setupTilemapAndZones(
     drawZone('도감 박물관',  50, 72, 20, 12, 0x10b981, 'zone-marble');
     drawZone('포켓몬 센터',   8, 72, 16, 12, 0xec4899, 'zone-pinktile');
     drawZone('체육관',       96, 72, 16, 12, 0xf59e0b, 'zone-metal');
+    drawZone('탐구 연구소',  48, 24, 20, 12, 0x2dd4bf, 'zone-lab');
 
     // 퀴즈 존 (북) — 8개 단원 개별 포탈
     const qpx = 8 * TILE_SIZE;

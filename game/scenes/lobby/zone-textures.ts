@@ -16,7 +16,8 @@ export type ZoneTextureKey =
   | 'zone-marble'
   | 'zone-pinktile'
   | 'zone-metal'
-  | 'zone-plaza';
+  | 'zone-plaza'
+  | 'zone-lab';
 
 type DrawFn = (ctx: CanvasRenderingContext2D) => void;
 
@@ -140,6 +141,35 @@ const DRAW: Record<ZoneTextureKey, DrawFn> = {
       ctx.arc(x, y, 1.2, 0, Math.PI * 2);
       ctx.fill();
     });
+  },
+
+  // 탐구 연구소 — 청록 회로 기판
+  'zone-lab': (ctx) => {
+    fill(ctx, '#021a1a');
+    const rand = seeded(505);
+    // 수평·수직 회로 트레이스
+    ctx.strokeStyle = 'rgba(45, 212, 191, 0.28)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const y = Math.floor(rand() * TILE);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(Math.floor(rand() * TILE * 0.6), y);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 3; i++) {
+      const x = Math.floor(rand() * TILE);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, Math.floor(rand() * TILE * 0.6));
+      ctx.stroke();
+    }
+    // 회로 노드 (작은 사각형)
+    ctx.fillStyle = 'rgba(45, 212, 191, 0.55)';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(Math.floor(rand() * (TILE - 4)), Math.floor(rand() * (TILE - 4)), 2, 2);
+    }
+    dither(ctx, 11, 'rgba(45, 212, 191, 0.06)', 10);
   },
 
   // 중앙 광장 — 사이언 홀로 격자
