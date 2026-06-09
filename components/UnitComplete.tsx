@@ -265,17 +265,8 @@ export default function UnitComplete({
         <div className="flex flex-col sm:flex-row gap-6 items-center justify-center max-w-md mx-auto">
           <button
             onClick={() => {
-              console.log("UnitComplete: '다시 도전하기' clicked");
-              try {
-                gameAudio.playClick();
-              } catch (e) {
-                console.warn("Audio feedback error:", e);
-              }
-              try {
-                onRestart();
-              } catch (e) {
-                console.error("onRestart callback error:", e);
-              }
+              gameAudio.playClick();
+              onRestart();
             }}
             className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2.5 px-6 py-4 bg-cyan-950/40 border border-cyan-400/40 hover:border-cyan-400 hover:bg-cyan-950/80 text-cyan-300 hover:text-white font-extrabold text-lg rounded-xl transition-all touch-target"
           >
@@ -286,17 +277,8 @@ export default function UnitComplete({
           {onGoLobby && (
             <button
               onClick={() => {
-                console.log("UnitComplete: '로비로 이동' clicked");
-                try {
-                  gameAudio.playClick();
-                } catch (e) {
-                  console.warn("Audio feedback error:", e);
-                }
-                try {
-                  onGoLobby();
-                } catch (e) {
-                  console.error("onGoLobby callback error:", e);
-                }
+                gameAudio.playClick();
+                onGoLobby();
               }}
               className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2.5 px-6 py-4 bg-purple-950/40 border border-purple-400/40 hover:border-purple-400 hover:bg-purple-950/80 text-purple-300 hover:text-white font-extrabold text-lg rounded-xl transition-all touch-target"
             >
@@ -309,14 +291,7 @@ export default function UnitComplete({
         {/* Share & Teacher Code Section */}
         <div className="mt-8 border-t border-cyan-500/10 pt-6 max-w-md mx-auto space-y-4">
           <button
-            onClick={() => {
-              console.log("UnitComplete: '학습 결과 복사하여 공유하기' clicked");
-              try {
-                handleShare();
-              } catch (e) {
-                console.error("handleShare error:", e);
-              }
-            }}
+            onClick={handleShare}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-950 hover:bg-cyan-950/30 border border-gray-800 hover:border-cyan-500/30 text-gray-300 hover:text-cyan-400 rounded-lg transition-all text-base touch-target font-bold"
           >
             <Share2 className="w-5 h-5" />
@@ -346,22 +321,11 @@ export default function UnitComplete({
               />
               <button
                 onClick={() => {
-                  console.log("UnitComplete: '교사용 제출 코드 복사' clicked");
-                  try {
-                    gameAudio.playClick();
-                  } catch (e) {
-                    console.warn("Audio feedback error:", e);
-                  }
-                  try {
-                    navigator.clipboard.writeText(resultCode).then(() => {
-                      setCodeCopied(true);
-                      setTimeout(() => setCodeCopied(false), 2000);
-                    }).catch((err) => {
-                      console.error("Clipboard API write failed:", err);
-                    });
-                  } catch (e) {
-                    console.error("Clipboard copy error:", e);
-                  }
+                  gameAudio.playClick();
+                  navigator.clipboard.writeText(resultCode).then(() => {
+                    setCodeCopied(true);
+                    setTimeout(() => setCodeCopied(false), 2000);
+                  });
                 }}
                 className="px-4 py-2 bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/30 text-cyan-400 font-bold text-xs rounded transition-all touch-target"
               >
