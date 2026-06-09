@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Trophy, Download, FileSpreadsheet, ClipboardPaste, CheckCircle } from 'lucide-react';
 import { ClassroomSession } from '../../../types';
 import { getUnitTitle } from '../../../data/questions';
+import StandardsHeatmap from './StandardsHeatmap';
 
 interface ImportPreview {
   name: string;
@@ -22,6 +23,7 @@ interface StatsPanelProps {
   onImportStudent: (name: string, avatar: string, score: number) => void;
   googleSyncState: 'idle' | 'syncing' | 'synced';
   copied: boolean;
+  onFilterByStandard?: (codes: string[]) => void;
 }
 
 export default function StatsPanel({
@@ -33,6 +35,7 @@ export default function StatsPanel({
   onImportStudent,
   googleSyncState,
   copied,
+  onFilterByStandard,
 }: StatsPanelProps) {
   const [importCode, setImportCode] = useState('');
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
@@ -247,6 +250,16 @@ export default function StatsPanel({
           </div>
         </div>
       </div>
+
+      {/* E-2: 성취기준별 히트맵 */}
+      {onFilterByStandard && (
+        <div className="glass-panel p-5 border-rose-500/10">
+          <StandardsHeatmap
+            classroomSession={classroomSession}
+            onFilterByStandard={onFilterByStandard}
+          />
+        </div>
+      )}
 
       {/* 학생 오프라인 제출 코드 수집 */}
       <div className="glass-panel p-5 border-purple-500/10">

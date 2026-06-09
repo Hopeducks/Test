@@ -100,3 +100,36 @@ export function hasActiveFilter(filter: QuestionFilter): boolean {
     (filter.unitIds?.length ?? 0) > 0
   );
 }
+
+export interface WeakStandardResult {
+  codes: string[];
+  isWeak: boolean;
+  unitId: number;
+}
+
+// E-1: 특정 단원의 성취기준 목록과 취약 여부를 반환.
+// correctRate < 0.6이면 isWeak=true (해당 단원 성취기준 전체를 약점으로 간주)
+export function getWeakStandards(unitId: number, correctRate: number): WeakStandardResult {
+  const unitStandards = standards
+    .filter(s => s.unitId === unitId && s.gradeLevel === 5)
+    .map(s => s.code);
+  return {
+    codes: unitStandards,
+    isWeak: correctRate < 0.6,
+    unitId,
+  };
+}
+
+// E-2: 단원 id → 해당 단원 5학년 성취기준 코드 목록
+export function getStandardsForUnit(unitId: number): string[] {
+  return standards
+    .filter(s => s.unitId === unitId && s.gradeLevel === 5)
+    .map(s => s.code);
+}
+
+// E-2: correctRate를 색상 클래스로 변환 (히트맵용)
+export function accuracyToHeatColor(rate: number): 'hot' | 'warm' | 'cool' {
+  if (rate >= 0.8) return 'cool';   // 80%+ — 양호 (초록)
+  if (rate >= 0.6) return 'warm';   // 60~79% — 주의 (노랑)
+  return 'hot';                     // 60% 미만 — 취약 (빨강)
+}

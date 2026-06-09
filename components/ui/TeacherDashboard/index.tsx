@@ -13,7 +13,7 @@ import ControlPanels from './ControlPanels';
 import StatsPanel from './StatsPanel';
 import RubricPanel from './RubricPanel';
 import StandardsBoard from './StandardsBoard';
-import { QuestionFilter } from '../../../lib/question-pool';
+import { QuestionFilter, getWeakStandards } from '../../../lib/question-pool';
 
 interface TeacherDashboardProps {
   sessionCode: string;
@@ -26,10 +26,36 @@ interface TeacherDashboardProps {
   toggleTheme?: () => void;
 }
 
-function getAiStudentPrescription(score: number): string {
-  if (score >= 8) return '🏆 우수 대원 처방: 기본 지식이 탄탄해 대기실 도감 수집과 펫 동행으로 이미 동기가 고양되어 있습니다. 급우들의 1:1 대전 상대 혹은 멘토로 임명해 학급 참여 흥미를 주도하게 권유하세요.';
-  if (score >= 5) return '📖 보통 대원 처방: 학습 흐름을 이해하나 콤보 누적이 잦고 지엽적 정의(산성/염기성 비교 등)를 혼동합니다. 퀴즈 오답 문항 복습 및 도감 상세 설명 란의 힌트 읽기를 가이드해 주세요.';
-  return '🚨 집중 관리 대원 처방: 문항 추론 및 읽기 이해가 현저히 늦어 배틀 경기에서 연패할 리스크가 큽니다. 메타버스 솔로 연습 퀴즈 모드로 이전 완료 단원을 1회 더 안전하게 재풀이하도록 밀착 조치해 주세요.';
+interface PrescriptionResult {
+  text: string;
+  isWeak: boolean;
+  weakStandardCodes: string[];
+}
+
+function getAiStudentPrescription(correctRate: number, unitId: number): PrescriptionResult {
+  const { codes, isWeak } = getWeakStandards(unitId, correctRate);
+  const weakStandardCodes = isWeak ? codes : [];
+  const codeLabel = codes.slice(0, 2).join(', ') + (codes.length > 2 ? ` 외 ${codes.length - 2}개` : '');
+
+  if (correctRate >= 0.8) {
+    return {
+      text: `🏆 우수 대원 처방: 기본 지식이 탄탄합니다(${unitId}단원 성취기준 ${codeLabel}). 급우들의 1:1 대전 상대 혹은 멘토로 임명해 학급 참여 흥미를 주도하게 권유하세요.`,
+      isWeak: false,
+      weakStandardCodes,
+    };
+  }
+  if (correctRate >= 0.6) {
+    return {
+      text: `📖 보통 대원 처방: 학습 흐름을 이해하나 ${codeLabel} 성취기준 관련 문항을 혼동합니다. 퀴즈 오답 복습과 도감 힌트 읽기를 가이드해 주세요.`,
+      isWeak: false,
+      weakStandardCodes,
+    };
+  }
+  return {
+    text: `🚨 집중 관리 처방: ${codeLabel} 성취기준(${unitId}단원) 정답률이 낮습니다. 해당 성취기준 복습 퀴즈를 즉시 출제하여 밀착 지도하세요.`,
+    isWeak: true,
+    weakStandardCodes,
+  };
 }
 
 export default function TeacherDashboard({
@@ -475,7 +501,7 @@ export default function TeacherDashboard({
         </div>
       ) : activeTab === 'stats' ? (
         /* Stats Tab */
-        <StatsPanel classroomSession={classroomSession} aiClassFeedback={aiClassFeedback} onExportCSV={handleExportCSV} onCopyTSV={handleCopyTSV} onGoogleSync={handleGoogleSync} onImportStudent={handleImportStudent} googleSyncState={googleSyncState} copied={copied} />
+        <StatsPanel classroomSession={classroomSession} aiClassFeedback={aiClassFeedback} onExportCSV={handleExportCSV} onCopyTSV={handleCopyTSV} onGoogleSync={handleGoogleSync} onImportStudent={handleImportStudent} googleSyncState={googleSyncState} copied={copied} onFilterByStandard={(codes) => { setActiveFilter({ standardCodes: codes }); setActiveTab('standards'); }} />
       ) : activeTab === 'rubric' ? (
         /* Rubric Tab */
         <div className="max-w-xl">
@@ -516,10 +542,28 @@ export default function TeacherDashboard({
               <div className="flex justify-between"><span>학습 평균 정답률:</span><span className="text-white font-bold">{Math.round(detailedStudent.correctRate * 100)}%</span></div>
               <div className="flex justify-between"><span>배틀 전적:</span><span className="text-red-400 font-bold">{detailedStudent.battleRecord.wins}승 {detailedStudent.battleRecord.losses}패</span></div>
             </div>
-            <div className="p-3 bg-cyan-950/20 border border-cyan-500/10 rounded-lg text-xs space-y-1.5 mb-4 leading-relaxed">
-              <span className="text-[9px] font-mono text-cyan-400 font-bold block uppercase tracking-widest">// AI PERSONALIZED PRESCRIPTION</span>
-              <p className="text-gray-350 font-sans">{getAiStudentPrescription(detailedStudent.player.level * 2)}</p>
-            </div>
+            {(() => {
+              const activeUnitId = classroomSession?.activeUnitId ?? 1;
+              const prescription = getAiStudentPrescription(detailedStudent.correctRate, activeUnitId);
+              return (
+                <div className="p-3 bg-cyan-950/20 border border-cyan-500/10 rounded-lg text-xs space-y-2 mb-4 leading-relaxed">
+                  <span className="text-[9px] font-mono text-cyan-400 font-bold block uppercase tracking-widest">// AI PERSONALIZED PRESCRIPTION</span>
+                  <p className="text-gray-300 font-sans">{prescription.text}</p>
+                  {prescription.isWeak && prescription.weakStandardCodes.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setActiveFilter({ standardCodes: prescription.weakStandardCodes });
+                        setActiveTab('standards');
+                        setDetailedStudent(null);
+                      }}
+                      className="w-full mt-1 py-1.5 bg-rose-900/30 hover:bg-rose-800/40 border border-rose-500/30 hover:border-rose-400/50 text-rose-300 font-bold text-[10px] rounded-lg transition-all"
+                    >
+                      📋 이 성취기준으로 복습 퀴즈 필터 적용
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
             <div className="space-y-2 mb-4 border-t border-gray-900 pt-4">
               <span className="text-[9px] font-mono text-gray-500 block uppercase tracking-widest">// ADMINISTRATOR KICK & RESET CONTROLS</span>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
