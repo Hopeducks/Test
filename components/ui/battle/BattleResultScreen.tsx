@@ -2,16 +2,22 @@
 
 import React from 'react';
 import { Crown, AlertTriangle, Swords } from 'lucide-react';
+import { BattleMode, RoundWins } from '../../../lib/battle-engine';
 import { BattleCard } from './battle-card';
 
 interface BattleResultScreenProps {
+  battleMode: BattleMode;
+  roundWins: RoundWins;
   battleOutcome: 'victory' | 'defeat' | 'draw';
-  awardedCoins: number;
+  awardedXp: number;
   roundsHistory: Array<{ winner: 'player' | 'opponent' | 'draw'; pCard: BattleCard; oCard: BattleCard }>;
   onBack: () => void;
 }
 
-export default function BattleResultScreen({ battleOutcome, awardedCoins, roundsHistory, onBack }: BattleResultScreenProps) {
+export default function BattleResultScreen({
+  battleMode, roundWins,
+  battleOutcome, awardedXp, roundsHistory, onBack,
+}: BattleResultScreenProps) {
   return (
     <div className="max-w-2xl mx-auto text-center py-12 px-6 glass-panel border-cyan-500/20 bg-gradient-to-b from-[#09101d] to-[#04060b] shadow-2xl relative animate-scale-up">
 
@@ -43,17 +49,24 @@ export default function BattleResultScreen({ battleOutcome, awardedCoins, rounds
 
       {/* Reward block */}
       <div className="p-4 bg-gray-950 border border-gray-900 rounded-xl max-w-sm mx-auto my-6 text-sm text-gray-400">
-        획득 카드 경험치: <span className="text-cyan-400 font-extrabold">+{awardedCoins} XP ⚡</span>
+        획득 카드 경험치: <span className="text-cyan-400 font-extrabold">+{awardedXp} XP ⚡</span>
       </div>
 
-      {/* Rounds details summary */}
+      {/* Bo3 round score */}
+      {battleMode === 'bestof3' && (
+        <div className="mb-4 px-4 py-2 bg-amber-950/20 border border-amber-500/20 rounded-lg text-xs text-amber-400 font-mono inline-block">
+          🏆 베스트오브3 라운드 스코어: {roundWins.player} - {roundWins.opponent}
+        </div>
+      )}
+
+      {/* Round history */}
       <div className="max-w-md mx-auto space-y-2 text-xs font-mono mb-8">
         <span className="text-gray-500 text-[10px] block uppercase tracking-widest">// ROUNDS SUMMARY</span>
         {roundsHistory.map((r, idx) => (
           <div key={idx} className="flex justify-between items-center p-2 border border-gray-900/60 bg-gray-950/20 rounded-lg">
             <span className="text-gray-400">Round {idx + 1}: {r.pCard.emoji} vs {r.oCard.emoji}</span>
             <span className={`font-bold ${r.winner === 'player' ? 'text-green-400' : r.winner === 'opponent' ? 'text-red-500' : 'text-gray-500'}`}>
-              {r.winner === 'player' ? '정답 승리' : r.winner === 'opponent' ? '오답 패배' : '무승부'}
+              {r.winner === 'player' ? '승리' : r.winner === 'opponent' ? '패배' : '무승부'}
             </span>
           </div>
         ))}
@@ -62,6 +75,7 @@ export default function BattleResultScreen({ battleOutcome, awardedCoins, rounds
       <div className="flex gap-4 max-w-sm mx-auto">
         <button
           onClick={onBack}
+          data-testid="back-to-lobby-btn"
           className="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-black text-sm rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.3)] btn-cyber transition-all"
         >
           대기실로 돌아가기 (Close)

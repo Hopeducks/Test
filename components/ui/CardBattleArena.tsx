@@ -9,6 +9,13 @@ import { costumeCatalog } from '../../data/costume-catalog';
 import { gameAudio } from '../../lib/audio';
 import { supabase } from '../../lib/supabase-client';
 import { Question, MCQuestion } from '../../types';
+import {
+  BattleMode,
+  RoundWins,
+  determineBattleOutcome,
+  shouldEndBattle,
+  updateRoundWins,
+} from '../../lib/battle-engine';
 import { BattleCard, mapToBattleCard } from './battle/battle-card';
 import MatchmakingScreen from './battle/MatchmakingScreen';
 import DeckSelectScreen from './battle/DeckSelectScreen';
@@ -18,6 +25,21 @@ import BattleResultScreen from './battle/BattleResultScreen';
 interface CardBattleArenaProps {
   onBack: () => void;
 }
+
+// Detect E2E mode once (URL param ?e2e=battle accelerates all timers)
+const isE2EMode =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('e2e') === 'battle';
+
+const TIMINGS = {
+  cardSelect: isE2EMode ? 3 : 5,     // seconds for card select phase (3 ticks × 100ms = 300ms in E2E)
+  quiz: isE2EMode ? 3 : 10,          // seconds for quiz phase (3 ticks × 100ms = 300ms in E2E)
+  resolve: isE2EMode ? 300 : 3000,   // ms delay between rounds
+  ai: isE2EMode ? 100 : 2500,        // ms for AI opponent to appear
+  countdown: isE2EMode ? 200 : 1000, // ms per countdown tick
+  special: isE2EMode ? 150 : 1500,   // ms for special effect + quiz→resolve
+  tick: isE2EMode ? 100 : 1000,      // ms per timer decrement tick
+} as const;
 
 export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
   const {
@@ -67,7 +89,6 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isAI, setIsAI] = useState(false);
 
-  // Compute AI opponent stats scaled by level
   const opponentStats = useMemo(() => {
     if (!opponent) return { hp: 0, attack: 0, defense: 0 };
     const lvl = opponent.level || 1;
@@ -82,6 +103,10 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
   const [deck, setDeck] = useState<BattleCard[]>([]);
   const [tempSelectedCards, setTempSelectedCards] = useState<string[]>([]);
 
+  // Battle mode
+  const [battleMode, setBattleMode] = useState<BattleMode>('standard');
+  const [roundWins, setRoundWins] = useState<RoundWins>({ player: 0, opponent: 0 });
+
   // Battle states
   const [playerHp, setPlayerHp] = useState(100);
   const [opponentHp, setOpponentHp] = useState(100);
@@ -90,7 +115,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
   // Round flow phases: 'card_select' | 'quiz' | 'resolve'
   const [roundPhase, setRoundPhase] = useState<'card_select' | 'quiz' | 'resolve'>('card_select');
-  const [roundTimer, setRoundTimer] = useState(5); // 5s for card selection, 10s for quiz
+  const [roundTimer, setRoundTimer] = useState<number>(TIMINGS.cardSelect);
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [opponentSelectedCardId, setOpponentSelectedCardId] = useState<string | null>(null);
@@ -114,28 +139,53 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
   // End outcome
   const [battleOutcome, setBattleOutcome] = useState<'victory' | 'defeat' | 'draw'>('victory');
-  const [awardedCoins, setAwardedCoins] = useState(0);
+  const [awardedXp, setAwardedXp] = useState(0);
 
-  // ── 배틀 Supabase 채널 ref ─────────────────────────────
+  // ── Refs ──────────────────────────────────────────────────────────────────
   const battleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Guards against double-firing endBattle (e.g., opponent forfeit arriving during normal end)
+  const battleEndedRef = useRef(false);
+  // Current HP readable inside setTimeout callbacks without stale closure
+  const playerHpRef = useRef(100);
+  const opponentHpRef = useRef(100);
+  // Current round wins / mode readable inside callbacks
+  const roundWinsRef = useRef<RoundWins>({ player: 0, opponent: 0 });
+  const battleModeRef = useRef<BattleMode>('standard');
+  // Tracked timeouts for cleanup on unmount
+  const pendingTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Keep refs in sync with state
+  useEffect(() => { playerHpRef.current = playerHp; }, [playerHp]);
+  useEffect(() => { opponentHpRef.current = opponentHp; }, [opponentHp]);
+  useEffect(() => { roundWinsRef.current = roundWins; }, [roundWins]);
+  useEffect(() => { battleModeRef.current = battleMode; }, [battleMode]);
+
+  // Clear all pending timers on unmount
+  useEffect(() => () => { pendingTimers.current.forEach(clearTimeout); }, []);
+
+  // Helper: tracked setTimeout (auto-removes itself from list on fire)
+  const addTimer = (fn: () => void, delay: number): ReturnType<typeof setTimeout> => {
+    const id = setTimeout(() => {
+      pendingTimers.current = pendingTimers.current.filter(t => t !== id);
+      fn();
+    }, delay);
+    pendingTimers.current.push(id);
+    return id;
+  };
 
   // 10 strongest cards unlocked by player
   const top10UnlockedCards = useMemo(() => {
     const unlocked = cards.filter(c => progress.unlockedCardIds.includes(c.id));
     const fallbackIds = ['u1_c1', 'u1_c3', 'u2_c2', 'u3_c1', 'u4_c3', 'u5_c2', 'u6_c1', 'u7_c2', 'u8_c3'];
     const available = unlocked.length > 0 ? unlocked : cards.filter(c => fallbackIds.includes(c.id));
-
-    // Map to BattleCard and sort by power descending
     return available
       .map(c => mapToBattleCard(c, progress.cardLevels))
       .sort((a, b) => b.power - a.power)
       .slice(0, 10);
   }, [progress.unlockedCardIds, progress.cardLevels]);
 
-  // Lock behind deck requirements
   const hasEnoughCards = top10UnlockedCards.length >= 3;
 
-  // Active battles checking
   const activeClassroomMatch = useMemo(() => {
     if (!classroomSession) return null;
     return classroomSession.activeBattles?.find(
@@ -143,10 +193,10 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     );
   }, [classroomSession, studentName]);
 
-  // ── 배틀 채널 구독 / 해제 ─────────────────────────────
+  // ── Supabase battle channel ──────────────────────────────────────────────
   useEffect(() => {
     const sessionCode = classroomSession?.code;
-    if (!sessionCode || isAI) return; // AI 배틀에는 채널 불필요
+    if (!sessionCode || isAI) return;
 
     const channelId = `battle_session_${sessionCode}`;
     const channel = supabase.channel(channelId);
@@ -154,17 +204,18 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
     channel
       .on('broadcast', { event: 'battle_card_selected' }, ({ payload }: { payload: { playerId: string; cardId?: string | null } }) => {
-        // 상대방이 카드를 선택했을 때 반영
         if (payload.playerId !== studentName) {
           setOpponentSelectedCardId(payload.cardId ?? null);
         }
       })
       .on('broadcast', { event: 'battle_round_result' }, ({ payload }: { payload: Record<string, unknown> }) => {
-        // 상대방 퀴즈 결과 반영 (옵션)
-        console.log('[Battle] round result received:', payload);
+        void payload; // acknowledged
       })
-      .on('broadcast', { event: 'battle_end' }, ({ payload }: { payload: Record<string, unknown> }) => {
-        console.log('[Battle] battle end event received:', payload);
+      .on('broadcast', { event: 'battle_end' }, ({ payload }: { payload: { playerId: string; outcome?: string } }) => {
+        // Opponent disconnected or forfeited — award forfeit win
+        if (payload.playerId !== studentName && !battleEndedRef.current) {
+          endBattle(playerHpRef.current, 0);
+        }
       })
       .subscribe();
 
@@ -172,101 +223,61 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
       channel.unsubscribe();
       battleChannelRef.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classroomSession?.code, isAI, studentName]);
 
-  // ── Broadcast 헬퍼: 카드 선택 송신 ────────────────────
+  // ── Broadcast helpers ────────────────────────────────────────────────────
   const broadcastCardSelected = (cardId: string) => {
     const ch = battleChannelRef.current;
     if (!ch || isAI) return;
-    ch.send({
-      type: 'broadcast',
-      event: 'battle_card_selected',
-      payload: { playerId: studentName, cardId, round, timestamp: Date.now() },
-    });
+    ch.send({ type: 'broadcast', event: 'battle_card_selected', payload: { playerId: studentName, cardId, round, timestamp: Date.now() } });
   };
 
-  // ── Broadcast 헬퍼: 라운드 결과 송신 ──────────────────
   const broadcastRoundResult = (
-    pCardId: string,
-    oCardId: string,
-    nextPlayerHp: number,
-    nextOpponentHp: number,
+    pCardId: string, oCardId: string,
+    nextPlayerHp: number, nextOpponentHp: number,
     roundWinner: 'player' | 'opponent' | 'draw'
   ) => {
     const ch = battleChannelRef.current;
     if (!ch || isAI) return;
-    ch.send({
-      type: 'broadcast',
-      event: 'battle_round_result',
-      payload: {
-        playerId: studentName,
-        round,
-        playerCard: pCardId,
-        opponentCard: oCardId,
-        playerHp: nextPlayerHp,
-        opponentHp: nextOpponentHp,
-        roundWinner,
-        timestamp: Date.now(),
-      },
-    });
+    ch.send({ type: 'broadcast', event: 'battle_round_result', payload: { playerId: studentName, round, playerCard: pCardId, opponentCard: oCardId, playerHp: nextPlayerHp, opponentHp: nextOpponentHp, roundWinner, timestamp: Date.now() } });
   };
 
-  // ── Broadcast 헬퍼: 배틀 종료 송신 ───────────────────
   const broadcastBattleEnd = (outcome: 'victory' | 'defeat' | 'draw') => {
     const ch = battleChannelRef.current;
     if (!ch || isAI) return;
-    ch.send({
-      type: 'broadcast',
-      event: 'battle_end',
-      payload: { playerId: studentName, outcome, timestamp: Date.now() },
-    });
+    ch.send({ type: 'broadcast', event: 'battle_end', payload: { playerId: studentName, outcome, timestamp: Date.now() } });
   };
 
-  // Matchmaking setup
+  // ── Matchmaking ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'matchmaking') return;
-
     gameAudio.playClick();
 
-    // If online classroom, check if teacher paired us
     if (activeClassroomMatch) {
       const oppName = activeClassroomMatch.player1 === studentName ? activeClassroomMatch.player2 : activeClassroomMatch.player1;
       const oppInfo = classroomSession?.students.find(s => s.name === oppName);
-
-      setOpponent({
-        name: oppName,
-        avatar: oppInfo?.avatar || '👾',
-        level: Math.max(1, Math.floor((oppInfo?.currentScore || 0) / 2) + 1)
-      });
+      setOpponent({ name: oppName, avatar: oppInfo?.avatar || '👾', level: Math.max(1, Math.floor((oppInfo?.currentScore || 0) / 2) + 1) });
       setIsAI(false);
       triggerCountdown();
       return;
     }
 
-    // Otherwise, simulate finding an AI opponent after 2.5 seconds
     const aiTimer = setTimeout(() => {
       const botNames = ['아인슈타인 꿈나무', '마리 퀴리 주니어', '리틀 뉴턴', '갈릴레이 워너비', '코페르니쿠스 키드'];
       const botAvatars = ['🧑‍🔬', '👩‍🔬', '🧙‍♂️', '🧑‍🚀', '🦖', '🦁'];
-      const botName = botNames[Math.floor(Math.random() * botNames.length)];
-      const botAvatar = botAvatars[Math.floor(Math.random() * botAvatars.length)];
-
-      setOpponent({
-        name: botName,
-        avatar: botAvatar,
-        level: Math.floor(Math.random() * 4) + 1
-      });
+      setOpponent({ name: botNames[Math.floor(Math.random() * botNames.length)], avatar: botAvatars[Math.floor(Math.random() * botAvatars.length)], level: Math.floor(Math.random() * 4) + 1 });
       setIsAI(true);
       triggerCountdown();
-    }, 2500);
+    }, TIMINGS.ai);
 
     return () => clearTimeout(aiTimer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, activeClassroomMatch]);
 
-  const triggerCountdown = () => {
-    setCountdown(3);
-  };
+  const triggerCountdown = () => setCountdown(3);
 
-  // Countdown timer loop
+  // Countdown loop
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
@@ -274,16 +285,46 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
       setPhase('deck_select');
       return;
     }
-
     const timer = setTimeout(() => {
       gameAudio.playClick();
       setCountdown(countdown - 1);
-    }, 1000);
-
+    }, TIMINGS.countdown);
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Pre-battle card selection
+  // ── E2E auto-deck: select first 3 cards and confirm immediately ──────────
+  useEffect(() => {
+    if (!isE2EMode || phase !== 'deck_select') return;
+    if (tempSelectedCards.length === 0 && top10UnlockedCards.length >= 3) {
+      setTempSelectedCards(top10UnlockedCards.slice(0, 3).map(c => c.id));
+    }
+  }, [phase, top10UnlockedCards, tempSelectedCards.length]);
+
+  useEffect(() => {
+    if (!isE2EMode || phase !== 'deck_select' || tempSelectedCards.length !== 3) return;
+    const id = addTimer(() => {
+      const chosen = top10UnlockedCards.filter(c => tempSelectedCards.includes(c.id));
+      if (chosen.length < 3) return;
+      setDeck(chosen);
+      setPlayerHp(100 + playerStats.hp);
+      setOpponentHp(100 + opponentStats.hp);
+      setRound(1);
+      setRoundsHistory([]);
+      setUsedPlayerCardIds([]);
+      setUsedOpponentCardIds([]);
+      setSelectedCardId(null);
+      setOpponentSelectedCardId(null);
+      battleEndedRef.current = false;
+      roundWinsRef.current = { player: 0, opponent: 0 };
+      setRoundWins({ player: 0, opponent: 0 });
+      setPhase('battle');
+      startRoundSelection();
+    }, 600);
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, tempSelectedCards.length]);
+
+  // ── Deck selection ───────────────────────────────────────────────────────
   const handleToggleCardSelection = (cardId: string) => {
     if (tempSelectedCards.includes(cardId)) {
       setTempSelectedCards(prev => prev.filter(id => id !== cardId));
@@ -296,7 +337,6 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
   const handleConfirmDeck = () => {
     if (tempSelectedCards.length !== 3) return;
-
     const chosen = top10UnlockedCards.filter(c => tempSelectedCards.includes(c.id));
     setDeck(chosen);
     setPlayerHp(100 + playerStats.hp);
@@ -305,56 +345,36 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     setRoundsHistory([]);
     setUsedPlayerCardIds([]);
     setUsedOpponentCardIds([]);
-
-    // Match up the opponent deck (AI chooses 3 random cards matching player level)
     setSelectedCardId(null);
     setOpponentSelectedCardId(null);
-
-    // Switch to Battle Phase
+    battleEndedRef.current = false;
+    roundWinsRef.current = { player: 0, opponent: 0 };
+    setRoundWins({ player: 0, opponent: 0 });
     setPhase('battle');
     startRoundSelection();
   };
 
   const handleUseHealItem = (itemType: 'potion' | 'potionHyper' | 'potionMax' | 'revive') => {
     const maxPlayerHp = 100 + playerStats.hp;
-    if (playerHp >= maxPlayerHp && itemType !== 'revive') {
-      alert('체력이 이미 가득 차 있습니다!');
-      return;
-    }
-
-    if (itemType === 'revive' && playerHp > 30) {
-      alert('기력의조각은 체력이 30 이하일 때만 사용할 수 있습니다!');
-      return;
-    }
-
-    // Consume item
+    if (playerHp >= maxPlayerHp && itemType !== 'revive') { alert('체력이 이미 가득 차 있습니다!'); return; }
+    if (itemType === 'revive' && playerHp > 30) { alert('기력의조각은 체력이 30 이하일 때만 사용할 수 있습니다!'); return; }
     const success = useItem(itemType);
-    if (!success) {
-      alert('치료제 아이템이 부족합니다!');
-      return;
-    }
-
-    gameAudio.playCatchSuccess(); // Play a nice success audio
-
-    // Apply heal
+    if (!success) { alert('치료제 아이템이 부족합니다!'); return; }
+    gameAudio.playCatchSuccess();
     let healAmount = 0;
     if (itemType === 'potion') healAmount = 30;
     else if (itemType === 'potionHyper') healAmount = 60;
-    else if (itemType === 'potionMax') healAmount = maxPlayerHp; // Full heal
+    else if (itemType === 'potionMax') healAmount = maxPlayerHp;
     else if (itemType === 'revive') healAmount = 50;
-
-    setPlayerHp(prev => {
-      const nextHp = prev + healAmount;
-      return Math.min(maxPlayerHp, nextHp);
-    });
+    setPlayerHp(prev => Math.min(maxPlayerHp, prev + healAmount));
   };
 
-  // Round loops
+  // ── Round loop ───────────────────────────────────────────────────────────
   const startRoundSelection = () => {
     setRoundPhase('card_select');
     setSelectedCardId(null);
     setOpponentSelectedCardId(null);
-    setRoundTimer(5);
+    setRoundTimer(TIMINGS.cardSelect);
     setPlayerCorrect(null);
     setOpponentCorrect(null);
     setSelectedOption(null);
@@ -362,31 +382,27 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     setDamagePopup({ player: null, opponent: null });
   };
 
-  // Main battle timers
+  // Main battle timer tick
   useEffect(() => {
     if (phase !== 'battle') return;
 
     if (roundTimer <= 0) {
       if (roundPhase === 'card_select') {
-        // Auto select a random card if player didn't pick
+        // Auto-select if player didn't pick
         const available = deck.filter(c => !usedPlayerCardIds.includes(c.id));
         const autoCard = selectedCardId || available[0]?.id || null;
-        if (autoCard) {
-          setSelectedCardId(autoCard);
-        }
+        if (autoCard) setSelectedCardId(autoCard);
 
-        // Opponent picks a card
-        const oppAvailable = cards
-          .map(c => mapToBattleCard(c, {}))
-          .filter(c => !usedOpponentCardIds.includes(c.id));
+        // Opponent picks
+        const oppAvailable = cards.map(c => mapToBattleCard(c, {})).filter(c => !usedOpponentCardIds.includes(c.id));
         const oppCard = oppAvailable[Math.floor(Math.random() * oppAvailable.length)] || oppAvailable[0];
         setOpponentSelectedCardId(oppCard.id);
 
-        // Transition to Quiz Phase
+        // Move to quiz
         setRoundPhase('quiz');
-        setRoundTimer(10);
+        setRoundTimer(TIMINGS.quiz);
 
-        // Setup quiz question — use active session filter (D6: no more hardcoded unit 1)
+        // Setup quiz question using active session filter (no hardcoded fallback)
         const unitId = classroomSession?.activeUnitId ?? 1;
         const { questions: battlePool } = selectQuestions({
           unitIds: [unitId],
@@ -396,143 +412,107 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
           count: 20,
         });
         const pool = battlePool.length > 0 ? battlePool : questions;
-        const randomQ = pool[Math.floor(Math.random() * pool.length)];
-        setQuizQuestion(randomQ);
+        setQuizQuestion(pool[Math.floor(Math.random() * pool.length)]);
+
       } else if (roundPhase === 'quiz') {
-        // Time out quiz answer
-        if (!isQuizAnswered) {
-          handleQuizAnswerSubmit(-1);
-        }
+        if (!isQuizAnswered) handleQuizAnswerSubmit(-1);
       }
       return;
     }
 
-    const t = setTimeout(() => {
-      setRoundTimer(prev => prev - 1);
-    }, 1000);
-
+    const t = setTimeout(() => setRoundTimer(prev => prev - 1), TIMINGS.tick);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roundTimer, roundPhase, phase]);
 
-  // secret card pick
   const handleSelectRoundCard = (cardId: string) => {
     if (roundPhase !== 'card_select' || usedPlayerCardIds.includes(cardId)) return;
     setSelectedCardId(cardId);
     gameAudio.playClick();
-    // ── 카드 선택 Broadcast ──
     broadcastCardSelected(cardId);
   };
 
   const handleQuizAnswerSubmit = (optionIndex: number) => {
     if (isQuizAnswered || !quizQuestion) return;
-
     setSelectedOption(optionIndex);
     setIsQuizAnswered(true);
-
     const correct = optionIndex === (quizQuestion as MCQuestion).correctIndex;
     setPlayerCorrect(correct);
-
-    if (correct) {
-      gameAudio.playCorrect();
-    } else {
-      gameAudio.playWrong();
-    }
-
-    // Opponent also answers (AI has 75% accuracy)
+    if (correct) gameAudio.playCorrect(); else gameAudio.playWrong();
     const oppCorrect = Math.random() < 0.75;
     setOpponentCorrect(oppCorrect);
-
-    // Resolve Phase
-    setTimeout(() => {
-      resolveRoundCombat(correct, oppCorrect);
-    }, 1500);
+    addTimer(() => resolveRoundCombat(correct, oppCorrect), TIMINGS.special);
   };
 
   const resolveRoundCombat = (pCorrect: boolean, oCorrect: boolean) => {
     setRoundPhase('resolve');
 
-    // Locate active cards
     const pCard = deck.find(c => c.id === selectedCardId)!;
-
-    // Build opponent levels mapping
-    const oppLevels = cards.reduce((acc, curr) => {
-      acc[curr.id] = opponent?.level || 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const oppLevels = cards.reduce((acc, curr) => { acc[curr.id] = opponent?.level || 1; return acc; }, {} as Record<string, number>);
     const allAvailableOpp = cards.map(c => mapToBattleCard(c, oppLevels));
     const oCard = allAvailableOpp.find(c => c.id === opponentSelectedCardId) || allAvailableOpp[0];
 
-    // Mark as used
     setUsedPlayerCardIds(prev => [...prev, pCard.id]);
     setUsedOpponentCardIds(prev => [...prev, oCard.id]);
 
-    // Apply 50% power increase if correct
     let pPower = pCard.power;
     if (pCorrect) pPower = Math.round(pPower * 1.5);
-
     let oPower = oCard.power;
     if (oCorrect) oPower = Math.round(oPower * 1.5);
 
-    // Calculate Type Multipliers
     const pMultiplier = getAttackMultiplier(pCard.unitId, oCard.unitId);
     const oMultiplier = getAttackMultiplier(oCard.unitId, pCard.unitId);
-
-    // Apply Type Multipliers
     pPower = Math.round(pPower * pMultiplier);
     oPower = Math.round(oPower * oMultiplier);
 
-    // Trigger visual legendary effects if any
     let effectDelay = 0;
     if (pCard.rarity === 'legendary') {
-      effectDelay = 1500;
+      effectDelay = isE2EMode ? 50 : 1500;
       triggerSpecialEffect(pCard.specialEffect || 'DNA 소용돌이!');
     }
     if (oCard.rarity === 'legendary') {
-      effectDelay = Math.max(effectDelay, 1500);
+      effectDelay = Math.max(effectDelay, isE2EMode ? 50 : 1500);
       triggerSpecialEffect(oCard.specialEffect || 'DNA 소용돌이!');
     }
 
-    setTimeout(() => {
-      // Calculate damage with cosmetic bonuses
-      // If immune (0.0x multiplier), damage is 0 (MISS). Else minimum damage is 5.
-      const pDmg = pMultiplier === 0
-        ? 0
-        : Math.max(5, Math.round(pPower + playerStats.attack - (oCard.defense + opponentStats.defense)));
-      const oDmg = oMultiplier === 0
-        ? 0
-        : Math.max(5, Math.round(oPower + opponentStats.attack - (pCard.defense + playerStats.defense)));
+    addTimer(() => {
+      const pDmg = pMultiplier === 0 ? 0 : Math.max(5, Math.round(pPower + playerStats.attack - (oCard.defense + opponentStats.defense)));
+      const oDmg = oMultiplier === 0 ? 0 : Math.max(5, Math.round(oPower + opponentStats.attack - (pCard.defense + playerStats.defense)));
 
-      // Shake screen unless both immune/0 damage
       if (pDmg > 0 || oDmg > 0) {
         setScreenShake(true);
-        setTimeout(() => setScreenShake(false), 500);
+        addTimer(() => setScreenShake(false), 500);
       }
 
-      // Flash numbers
       setDamagePopup({ player: oDmg, opponent: pDmg });
 
-      // Animate HP
-      const nextPlayerHp = Math.max(0, playerHp - oDmg);
-      const nextOpponentHp = Math.max(0, opponentHp - pDmg);
+      const nextPlayerHp = Math.max(0, playerHpRef.current - oDmg);
+      const nextOpponentHp = Math.max(0, opponentHpRef.current - pDmg);
       setPlayerHp(nextPlayerHp);
       setOpponentHp(nextOpponentHp);
 
-      // Record round history
-      const roundWinner = pDmg > oDmg ? 'player' : oDmg > pDmg ? 'opponent' : 'draw';
-      setRoundsHistory(prev => [...prev, { winner: roundWinner, pCard, oCard }]);
+      const roundWinner: 'player' | 'opponent' | 'draw' =
+        pDmg > oDmg ? 'player' : oDmg > pDmg ? 'opponent' : 'draw';
 
-      // ── 라운드 결과 Broadcast ──
+      setRoundsHistory(prev => [...prev, { winner: roundWinner, pCard, oCard }]);
       broadcastRoundResult(pCard.id, oCard.id, nextPlayerHp, nextOpponentHp, roundWinner);
 
-      // Transition to next round or end
-      setTimeout(() => {
-        if (round >= 3 || nextPlayerHp <= 0 || nextOpponentHp <= 0) {
+      // Update round wins for bestof3
+      const newRoundWins = updateRoundWins(roundWinsRef.current, roundWinner);
+      if (battleModeRef.current === 'bestof3') {
+        roundWinsRef.current = newRoundWins;
+        setRoundWins(newRoundWins);
+      }
+
+      addTimer(() => {
+        // Use `round` captured at resolveRoundCombat call time (current round number, not stale)
+        if (shouldEndBattle(battleModeRef.current, newRoundWins, round, nextPlayerHp, nextOpponentHp)) {
           endBattle(nextPlayerHp, nextOpponentHp);
         } else {
-          setRound(round + 1);
+          setRound(r => r + 1);
           startRoundSelection();
         }
-      }, 3000);
+      }, TIMINGS.resolve);
 
     }, effectDelay);
   };
@@ -540,67 +520,54 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
   const triggerSpecialEffect = (effect: string) => {
     setSpecialEffectText(effect);
     gameAudio.playCatchSuccess();
-
     if (effect === '번개 섬광!') {
       setFlashScreen(true);
-      setTimeout(() => setFlashScreen(false), 1000);
+      addTimer(() => setFlashScreen(false), isE2EMode ? 100 : 1000);
     } else if (effect === '화석 폭발!') {
       setShowFossilParticles(true);
-      setTimeout(() => setShowFossilParticles(false), 1200);
+      addTimer(() => setShowFossilParticles(false), isE2EMode ? 100 : 1200);
     } else {
       setShowDnaVortex(true);
-      setTimeout(() => setShowDnaVortex(false), 1200);
+      addTimer(() => setShowDnaVortex(false), isE2EMode ? 100 : 1200);
     }
-
-    setTimeout(() => {
-      setSpecialEffectText(null);
-    }, 1500);
+    addTimer(() => setSpecialEffectText(null), TIMINGS.special);
   };
 
   const endBattle = async (finalPlayerHp: number, finalOppHp: number) => {
-    let outcome: 'victory' | 'defeat' | 'draw' = 'draw';
-    // 전투 보상은 코인이 아니라 카드 경험치(레벨 연동). 코인은 마일스톤에서만 지급. (PRD EPIC A/D)
-    let xpGain = 20;
+    if (battleEndedRef.current) return;
+    battleEndedRef.current = true;
 
-    if (finalPlayerHp > finalOppHp) {
-      outcome = 'victory';
-      xpGain = 45;
-      gameAudio.playCatchSuccess();
-    } else if (finalOppHp > finalPlayerHp) {
-      outcome = 'defeat';
-      xpGain = 15;
-      gameAudio.playWrong();
-    } else {
-      outcome = 'draw';
-      xpGain = 25;
-    }
+    const outcome = determineBattleOutcome(
+      battleModeRef.current,
+      finalPlayerHp,
+      finalOppHp,
+      roundWinsRef.current
+    );
 
+    const xpGain = outcome === 'victory' ? 45 : outcome === 'draw' ? 25 : 15;
     setBattleOutcome(outcome);
-    setAwardedCoins(xpGain);
+    setAwardedXp(xpGain);
 
-    // ── 배틀 종료 Broadcast ──
+    if (outcome === 'victory') gameAudio.playCatchSuccess();
+    else if (outcome === 'defeat') gameAudio.playWrong();
+
     broadcastBattleEnd(outcome);
 
-    // 사용한 덱 카드에 경험치 지급 (코인 미지급)
     const deckCardIds = deck.map(c => c.id);
-    if (deckCardIds.length > 0) {
-      gainCardXp(deckCardIds, xpGain);
-    }
+    if (deckCardIds.length > 0) gainCardXp(deckCardIds, xpGain);
     incrementDailyStat('battlesPlayed');
 
-    // Write battle results to Supabase game_sessions list
     try {
-      const { data } = await supabase.from('battle_results').insert({
+      await supabase.from('battle_results').insert({
         player_name: studentName,
         opponent_name: opponent?.name || 'AI 상대',
         outcome,
         rounds_won: roundsHistory.filter(r => r.winner === 'player').length,
         rounds_lost: roundsHistory.filter(r => r.winner === 'opponent').length,
-        awarded_coins: xpGain
+        awarded_coins: xpGain,
       });
-      console.log('Battle results saved:', data);
-    } catch (e) {
-      console.error('Failed to log battle result to Supabase:', e);
+    } catch {
+      // Supabase offline — non-fatal
     }
 
     setPhase('results');
@@ -609,32 +576,21 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
   return (
     <div className={`w-full max-w-6xl mx-auto px-4 py-4 relative font-sans text-gray-100 ${screenShake ? 'animate-shake' : ''}`}>
 
-      {/* ⚡ lightning Flash Overlay */}
-      {flashScreen && (
-        <div className="fixed inset-0 bg-white z-50 animate-flash-overlay pointer-events-none" />
-      )}
+      {flashScreen && <div className="fixed inset-0 bg-white z-50 animate-flash-overlay pointer-events-none" />}
 
-      {/* ☄️ Fossil Particle Explosion Overlay */}
       {showFossilParticles && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           {Array.from({ length: 16 }).map((_, i) => {
             const rx = (Math.random() - 0.5) * 400;
             const ry = (Math.random() - 0.5) * 400;
             return (
-              <div
-                key={i}
-                className="absolute w-4 h-4 bg-amber-500 rounded-full animate-particle"
-                style={{
-                  ['--tx' as string]: `${rx}px`,
-                  ['--ty' as string]: `${ry}px`,
-                } as React.CSSProperties}
-              />
+              <div key={i} className="absolute w-4 h-4 bg-amber-500 rounded-full animate-particle"
+                style={{ ['--tx' as string]: `${rx}px`, ['--ty' as string]: `${ry}px` } as React.CSSProperties} />
             );
           })}
         </div>
       )}
 
-      {/* 🧬 DNA Vortex Spiral Ring Overlay */}
       {showDnaVortex && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none overflow-hidden">
           <div className="w-80 h-80 rounded-full border-4 border-dashed border-cyan-400 animate-spin" />
@@ -642,21 +598,20 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
         </div>
       )}
 
-      {/* Special effect text banner */}
       {specialEffectText && (
         <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 px-8 py-4 bg-yellow-500 text-black font-black text-3xl border border-white shadow-2xl rounded-2xl animate-bounce">
           ⚡ {specialEffectText} ⚡
         </div>
       )}
 
-      {/* MATCHMAKING */}
       {phase === 'matchmaking' && (
         <MatchmakingScreen opponent={opponent} countdown={countdown} />
       )}
 
-      {/* DECK BUILDING */}
       {phase === 'deck_select' && (
         <DeckSelectScreen
+          battleMode={battleMode}
+          onSetBattleMode={setBattleMode}
           playerStats={playerStats}
           hasEnoughCards={hasEnoughCards}
           top10UnlockedCards={top10UnlockedCards}
@@ -668,17 +623,13 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
         />
       )}
 
-      {/* COMBAT */}
-      {phase === 'battle' && quizQuestion && (
+      {phase === 'battle' && (
         <BattleCombatScreen
+          battleMode={battleMode}
+          roundWins={roundWins}
           studentName={studentName}
           studentAvatar={studentAvatar}
-          equippedCosmetics={{
-            outfit: equippedCosmetics.outfit,
-            expression: equippedCosmetics.expression,
-            accessory: equippedCosmetics.accessory,
-            mount: equippedCosmetics.mount,
-          }}
+          equippedCosmetics={{ outfit: equippedCosmetics.outfit, expression: equippedCosmetics.expression, accessory: equippedCosmetics.accessory, mount: equippedCosmetics.mount }}
           playerStats={playerStats}
           opponent={opponent}
           opponentStats={opponentStats}
@@ -706,16 +657,16 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
         />
       )}
 
-      {/* RESULTS */}
       {phase === 'results' && (
         <BattleResultScreen
+          battleMode={battleMode}
+          roundWins={roundWins}
           battleOutcome={battleOutcome}
-          awardedCoins={awardedCoins}
+          awardedXp={awardedXp}
           roundsHistory={roundsHistory}
           onBack={onBack}
         />
       )}
-
     </div>
   );
 }
