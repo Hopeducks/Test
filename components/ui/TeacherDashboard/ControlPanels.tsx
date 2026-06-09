@@ -8,6 +8,7 @@ import TournamentBracketView from '../TournamentBracketView';
 import AnswerDistributionPanel from './AnswerDistributionPanel';
 import { getUnitTitle, getUnitQuestions } from '../../../data/questions';
 import { questions } from '../../../data/questions';
+import { selectQuestions, hasActiveFilter, QuestionFilter } from '../../../lib/question-pool';
 import { cards } from '../../../data/cards';
 import { supabase } from '../../../lib/supabase-client';
 
@@ -33,6 +34,7 @@ interface ControlPanelsProps {
   setSelectedUnitId: (id: number) => void;
   sessionCode: string;
   setFeedEvents: React.Dispatch<React.SetStateAction<DashboardEvent[]>>;
+  activeFilter?: QuestionFilter;
 }
 
 export default function ControlPanels({
@@ -42,6 +44,7 @@ export default function ControlPanels({
   setSelectedUnitId,
   sessionCode,
   setFeedEvents,
+  activeFilter = {},
 }: ControlPanelsProps) {
   const [draggedStudentName, setDraggedStudentName] = useState<string | null>(null);
   const [selectedStudentForPairing, setSelectedStudentForPairing] = useState<string | null>(null);
@@ -58,14 +61,23 @@ export default function ControlPanels({
 
   const handleStartQuiz = () => {
     gameAudio.playClick();
-    // D2 수정: 출제 10문항 ID를 세션에 기록해야 AnswerDistributionPanel이
-    // 문항별 선택지 분포를 정확히 집계한다. 학생 QuizScreen 셔플 규약과 동일
-    // (getUnitQuestions → 셔플 → 10개 슬라이스).
-    const pool = getUnitQuestions(classroomSession.activeUnitId);
-    const questionIds = [...pool]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 10)
-      .map(q => q.id);
+    // B-4/D2: 성취기준 필터가 활성화된 경우 selectQuestions를 사용해
+    // 필터 조건에 맞는 문항으로 questionIds를 구성한다.
+    // 필터가 없으면 기존 단원 기반 셔플 경로를 유지한다.
+    let questionIds: string[];
+    if (hasActiveFilter(activeFilter)) {
+      const result = selectQuestions({
+        ...activeFilter,
+        count: 10,
+      });
+      questionIds = result.questions.map(q => q.id);
+    } else {
+      const pool = getUnitQuestions(classroomSession.activeUnitId);
+      questionIds = [...pool]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 10)
+        .map(q => q.id);
+    }
     setClassroomSession({
       ...classroomSession,
       status: 'playing',

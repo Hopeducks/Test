@@ -12,6 +12,8 @@ import ActivityFeed from './ActivityFeed';
 import ControlPanels from './ControlPanels';
 import StatsPanel from './StatsPanel';
 import RubricPanel from './RubricPanel';
+import StandardsBoard from './StandardsBoard';
+import { QuestionFilter } from '../../../lib/question-pool';
 
 interface TeacherDashboardProps {
   sessionCode: string;
@@ -38,7 +40,8 @@ export default function TeacherDashboard({
   theme,
   toggleTheme,
 }: TeacherDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'control' | 'stats' | 'rubric'>('control');
+  const [activeTab, setActiveTab] = useState<'control' | 'stats' | 'rubric' | 'standards'>('control');
+  const [activeFilter, setActiveFilter] = useState<QuestionFilter>({});
   const [selectedUnitId, setSelectedUnitId] = useState<number>(1);
   const [detailedStudent, setDetailedStudent] = useState<PlayerDashboardEntry | null>(null);
   const [feedEvents, setFeedEvents] = useState<DashboardEvent[]>([]);
@@ -424,13 +427,16 @@ export default function TeacherDashboard({
       {/* Tab Navigation */}
       {classroomSession && (
         <div className="flex border-b border-gray-900 pb-2 gap-4">
-          {(['control', 'stats', 'rubric'] as const).map(tab => (
+          {(['control', 'stats', 'rubric', 'standards'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => { gameAudio.playClick(); setActiveTab(tab); }}
               className={`px-4 py-1.5 text-xs font-bold border-b-2 transition-all ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
             >
-              {tab === 'control' ? '🎮 실시간 세션 제어판' : tab === 'stats' ? '📊 학급 학습 통계 분석' : '📋 단원 루브릭'}
+              {tab === 'control' ? '🎮 실시간 세션 제어판'
+                : tab === 'stats' ? '📊 학급 학습 통계 분석'
+                : tab === 'rubric' ? '📋 단원 루브릭'
+                : '📐 성취기준 보드'}
             </button>
           ))}
         </div>
@@ -465,15 +471,20 @@ export default function TeacherDashboard({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <StudentGrid classroomSession={classroomSession} sessionCode={sessionCode} lastDbUpdate={lastDbUpdate} setDetailedStudent={setDetailedStudent} />
           <ActivityFeed feedEvents={feedEvents} setFeedEvents={setFeedEvents} />
-          <ControlPanels classroomSession={classroomSession} setClassroomSession={setClassroomSession} selectedUnitId={selectedUnitId} setSelectedUnitId={setSelectedUnitId} sessionCode={sessionCode} setFeedEvents={setFeedEvents} />
+          <ControlPanels classroomSession={classroomSession} setClassroomSession={setClassroomSession} selectedUnitId={selectedUnitId} setSelectedUnitId={setSelectedUnitId} sessionCode={sessionCode} setFeedEvents={setFeedEvents} activeFilter={activeFilter} />
         </div>
       ) : activeTab === 'stats' ? (
         /* Stats Tab */
         <StatsPanel classroomSession={classroomSession} aiClassFeedback={aiClassFeedback} onExportCSV={handleExportCSV} onCopyTSV={handleCopyTSV} onGoogleSync={handleGoogleSync} onImportStudent={handleImportStudent} googleSyncState={googleSyncState} copied={copied} />
-      ) : (
+      ) : activeTab === 'rubric' ? (
         /* Rubric Tab */
         <div className="max-w-xl">
           <RubricPanel activeUnitId={classroomSession.activeUnitId} />
+        </div>
+      ) : (
+        /* Standards Tab */
+        <div className="max-w-2xl">
+          <StandardsBoard filter={activeFilter} onFilterChange={setActiveFilter} />
         </div>
       )}
 

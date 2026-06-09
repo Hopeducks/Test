@@ -99,6 +99,8 @@ interface BaseQuestion {
   hint?: string;
   difficulty?: 'easy' | 'medium' | 'hard';
   cardReward?: string;
+  standardCodes?: string[];  // 2022 개정 교육과정 성취기준 코드 (B-1)
+  gradeLevel?: number;       // 학년 — 미설정 시 5학년으로 간주 (B-1)
 }
 
 export interface MCQuestion extends BaseQuestion {
@@ -350,6 +352,9 @@ export interface ClassroomSession {
   currentQuestionIndex: number
   questionStartTime: number
   questionIds?: string[]
+  selectedStandardCodes?: string[]              // B-3: 성취기준 보드 선택
+  gradeFilter?: number[]                        // B-3
+  difficultyFilter?: ('easy' | 'medium' | 'hard')[]  // B-3
   battleMode: boolean
   tournament?: TournamentBracket;
   raidBossMaxHp?: number;
