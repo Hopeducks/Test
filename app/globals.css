@@ -373,6 +373,22 @@
   box-shadow: 1px 1px 0px 0px #1e293b;
 }
 
+/* Dark theme: btn-cyber uses dark background so text stays readable */
+.dark-theme .btn-cyber {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #475569;
+  box-shadow: 2px 2px 0px 0px #475569;
+}
+
+.dark-theme .btn-cyber:hover:not(:disabled) {
+  box-shadow: 3px 3px 0px 0px #64748b;
+}
+
+.dark-theme .btn-cyber:active:not(:disabled) {
+  box-shadow: 1px 1px 0px 0px #475569;
+}
+
 .card-cyber {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   background: #ffffff;

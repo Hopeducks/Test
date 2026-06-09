@@ -145,7 +145,7 @@ export default function UnitComplete({
 
       {/* Main Results Panel */}
       <div className="glass-panel p-6 md:p-10 border-cyan-500/20 text-center relative overflow-hidden bg-gradient-to-b from-[#0c1221] to-[#040710]">
-        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,var(--color-neon-blue)_0%,transparent_70%)]" />
+        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(circle_at_center,var(--color-neon-blue)_0%,transparent_70%)]" />
 
         {/* Header */}
         <div className="text-sm font-mono text-cyan-500 tracking-widest uppercase mb-1">
