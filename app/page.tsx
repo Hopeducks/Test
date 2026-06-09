@@ -118,6 +118,7 @@ export default function Home() {
     const handleAchievement = (e: Event) => {
       const detail = (e as CustomEvent<{ name: string; icon: string }>).detail;
       if (!detail) return;
+      gameAudio.playAchievement();
       const id = counter++;
       setAchievementToasts(prev => [...prev, { id, name: detail.name, icon: detail.icon }]);
       setTimeout(() => {
@@ -135,6 +136,7 @@ export default function Home() {
     const handleEvolved = (e: Event) => {
       const detail = (e as CustomEvent<CardEvolutionInfo>).detail;
       if (!detail) return;
+      gameAudio.playCardUnlock();
       setEvolutionQueue(prev => [...prev, detail]);
     };
     window.addEventListener('react:cardEvolved', handleEvolved);

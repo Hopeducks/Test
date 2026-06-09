@@ -69,7 +69,7 @@ export default function PhaserCanvas({ sessionCode, player, onZoneAction }: Phas
     const handleZoneEntered = (e: Event) => {
       const customEvent = e as CustomEvent<{ zone: 'quiz' | 'battle' | 'raid' | 'museum' | 'center' | 'gym' | 'lab'; unitId?: number }>;
       const { zone, unitId } = customEvent.detail;
-      gameAudio.playClick();
+      gameAudio.playPortalEnter();
       setActiveZoneModal({ zone, unitId });
     };
 

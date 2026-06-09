@@ -235,6 +235,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
         setStreak(newStreak);
         setFlashType('correct');
         gameAudio.playCorrect();
+        if (newStreak >= 3) gameAudio.playStreak(newStreak);
         // 연속 정답 업적 평가 (streak)
         triggerAchievementEvent({ type: 'streak', val: newStreak });
         if (isReviewMode) removeWrongAnswer(currentQuestion.id);
@@ -313,6 +314,7 @@ export default function QuizScreen({ unitId, onQuizComplete, onCancel, questionI
       const newStreak = streak + 1;
       setScore(prev => prev + 1); setStreak(newStreak);
       setFlashType('correct'); gameAudio.playCorrect();
+      if (newStreak >= 3) gameAudio.playStreak(newStreak);
       triggerAchievementEvent({ type: 'streak', val: newStreak });
       if (isReviewMode) removeWrongAnswer(q.id);
       if (q.cardReward) { unlockCard(q.cardReward); setNewlyUnlockedCardIds(prev => [...prev, q.cardReward!]); }

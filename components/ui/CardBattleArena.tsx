@@ -481,6 +481,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
 
       if (pDmg > 0 || oDmg > 0) {
         setScreenShake(true);
+        gameAudio.playBattleHit();
         addTimer(() => setScreenShake(false), 500);
       }
 
@@ -548,7 +549,7 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
     setBattleOutcome(outcome);
     setAwardedXp(xpGain);
 
-    if (outcome === 'victory') gameAudio.playCatchSuccess();
+    if (outcome === 'victory') gameAudio.playBattleWin();
     else if (outcome === 'defeat') gameAudio.playWrong();
 
     broadcastBattleEnd(outcome);
