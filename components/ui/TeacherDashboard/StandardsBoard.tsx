@@ -24,9 +24,18 @@ const DIFFICULTY_CHIPS: { key: 'easy' | 'medium' | 'hard'; label: string; color:
   { key: 'hard',   label: '어려움', color: 'bg-rose-900/40 text-rose-300 border-rose-600/40' },
 ];
 
+// 사용 가능한 학년 목록 — standards 데이터에서 동적 파생 (코드 무수정 확장)
+const AVAILABLE_GRADE_LEVELS: number[] = [...new Set(standards.map(s => s.gradeLevel))].sort();
+
+const GRADE_LABELS: Record<number, string> = {
+  5: '5학년',
+  6: '6학년 심화',
+};
+
 export default function StandardsBoard({ filter, onFilterChange }: StandardsBoardProps) {
   const activeCodes = new Set(filter.standardCodes ?? []);
   const activeDiffs = new Set(filter.difficulties ?? []);
+  const activeGrades = new Set(filter.gradeLevels ?? []);
 
   // 현재 필터 기준 출제 가능 문항 수
   const previewCount = useMemo(() => countQuestions(filter), [filter]);
@@ -37,6 +46,14 @@ export default function StandardsBoard({ filter, onFilterChange }: StandardsBoar
     if (next.has(code)) next.delete(code);
     else next.add(code);
     onFilterChange({ ...filter, standardCodes: [...next] });
+  };
+
+  const toggleGrade = (grade: number) => {
+    gameAudio.playClick();
+    const next = new Set(activeGrades);
+    if (next.has(grade)) next.delete(grade);
+    else next.add(grade);
+    onFilterChange({ ...filter, gradeLevels: [...next] });
   };
 
   const toggleDifficulty = (diff: 'easy' | 'medium' | 'hard') => {
@@ -53,7 +70,7 @@ export default function StandardsBoard({ filter, onFilterChange }: StandardsBoar
     onFilterChange({ count: filter.count });
   };
 
-  const hasSelection = activeCodes.size > 0 || activeDiffs.size > 0;
+  const hasSelection = activeCodes.size > 0 || activeDiffs.size > 0 || activeGrades.size > 0;
 
   return (
     <div className="space-y-4">
@@ -80,10 +97,15 @@ export default function StandardsBoard({ filter, onFilterChange }: StandardsBoar
             {previewCount}문항
           </span>
         </div>
-        {activeCodes.size === 0 && activeDiffs.size === 0 ? (
-          <p className="text-[10px] text-gray-600">성취기준 또는 난이도를 선택하면 문항 풀이 변경됩니다.</p>
+        {!hasSelection ? (
+          <p className="text-[10px] text-gray-600">성취기준·학년·난이도를 선택하면 출제 풀이 변경됩니다.</p>
         ) : (
           <div className="flex flex-wrap gap-1 mt-1">
+            {[...activeGrades].map(g => (
+              <span key={g} className="text-[9px] font-mono bg-emerald-900/30 text-emerald-400 border border-emerald-700/30 px-1.5 py-0.5 rounded">
+                {GRADE_LABELS[g] ?? `${g}학년`}
+              </span>
+            ))}
             {[...activeCodes].map(code => (
               <span key={code} className="text-[9px] font-mono bg-cyan-900/30 text-cyan-400 border border-cyan-700/30 px-1.5 py-0.5 rounded">
                 {code}
@@ -97,6 +119,28 @@ export default function StandardsBoard({ filter, onFilterChange }: StandardsBoar
           </div>
         )}
       </div>
+
+      {/* 학년 칩 */}
+      {AVAILABLE_GRADE_LEVELS.length > 1 && (
+        <div>
+          <div className="text-[10px] font-mono text-gray-500 mb-2 uppercase tracking-widest">학년 필터</div>
+          <div className="flex gap-2 flex-wrap">
+            {AVAILABLE_GRADE_LEVELS.map(grade => (
+              <button
+                key={grade}
+                onClick={() => toggleGrade(grade)}
+                className={`px-3 py-1 text-xs font-bold rounded-full border transition-all ${
+                  activeGrades.has(grade)
+                    ? 'bg-emerald-900/40 text-emerald-300 border-emerald-600/40 ring-1 ring-offset-1 ring-offset-black ring-current'
+                    : 'border-gray-700 text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {GRADE_LABELS[grade] ?? `${grade}학년`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 난이도 칩 */}
       <div>

@@ -4,6 +4,7 @@ import { questions } from '../data/questions';
 import { oxQuestions } from '../data/questions-ox';
 import { matchingQuestions } from '../data/questions-matching';
 import { shortQuestions } from '../data/questions-short';
+import { grade6Questions } from '../data/questions-grade6';
 import { standards } from '../data/standards';
 
 export interface QuestionFilter {
@@ -36,6 +37,7 @@ const ALL_QUESTIONS: Question[] = [
   ...oxQuestions,
   ...matchingQuestions,
   ...shortQuestions,
+  ...grade6Questions,
 ];
 
 // 필터 조건에 맞는 문항 배열 반환 (셔플 없음 — 순수 함수)

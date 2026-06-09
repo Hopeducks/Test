@@ -4,6 +4,7 @@ import { questions } from '../data/questions';
 import { oxQuestions } from '../data/questions-ox';
 import { matchingQuestions } from '../data/questions-matching';
 import { shortQuestions } from '../data/questions-short';
+import { grade6Questions } from '../data/questions-grade6';
 import {
   filterQuestions,
   selectQuestions,
@@ -51,10 +52,10 @@ describe('[B-6] 성취기준 카탈로그 정합성', () => {
 
 // ── selectQuestions 기능 테스트 ───────────────────────────────────────────
 describe('filterQuestions', () => {
-  it('빈 필터는 전 문항 풀을 반환한다', () => {
+  it('빈 필터는 전 문항 풀을 반환한다 (6학년 시드 포함)', () => {
     const all = filterQuestions({});
     const total =
-      questions.length + oxQuestions.length + matchingQuestions.length + shortQuestions.length;
+      questions.length + oxQuestions.length + matchingQuestions.length + shortQuestions.length + grade6Questions.length;
     expect(all.length).toBe(total);
   });
 
@@ -178,5 +179,86 @@ describe('hasActiveFilter', () => {
 
   it('difficulties가 있으면 true', () => {
     expect(hasActiveFilter({ difficulties: ['hard'] })).toBe(true);
+  });
+
+  it('gradeLevels가 있으면 true', () => {
+    expect(hasActiveFilter({ gradeLevels: [6] })).toBe(true);
+  });
+});
+
+// ── Phase 3: 다학년·고난이도 확장 테스트 ────────────────────────────────────
+describe('[Phase 3] 6학년 시드 문항 정합성', () => {
+  it('6학년 문항은 모두 gradeLevel:6을 가진다', () => {
+    for (const q of grade6Questions) {
+      expect(q.gradeLevel).toBe(6);
+    }
+  });
+
+  it('6학년 문항은 모두 difficulty가 명시되어 있다', () => {
+    for (const q of grade6Questions) {
+      expect(['easy', 'medium', 'hard']).toContain(q.difficulty);
+    }
+  });
+
+  it('6학년 문항은 모두 standardCodes가 최소 1개 이상 태깅되어 있다', () => {
+    for (const q of grade6Questions) {
+      expect(q.standardCodes).toBeDefined();
+      expect(q.standardCodes!.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('6학년 문항의 standardCodes는 standards 카탈로그에 존재한다', () => {
+    const allCodes = new Set(standards.map(s => s.code));
+    for (const q of grade6Questions) {
+      for (const code of q.standardCodes ?? []) {
+        expect(allCodes.has(code)).toBe(true);
+      }
+    }
+  });
+
+  it('6학년 문항 ID는 중복이 없다', () => {
+    const ids = grade6Questions.map(q => q.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('6학년 문항 ID가 기존 5학년 MC 문항 ID와 충돌하지 않는다', () => {
+    const existingIds = new Set([
+      ...questions.map(q => q.id),
+      ...oxQuestions.map(q => q.id),
+    ]);
+    for (const q of grade6Questions) {
+      expect(existingIds.has(q.id)).toBe(false);
+    }
+  });
+});
+
+describe('[Phase 3] gradeLevel 필터 동작', () => {
+  it('gradeLevels:[6] 필터는 6학년 문항만 반환한다', () => {
+    const result = filterQuestions({ gradeLevels: [6] });
+    expect(result.every(q => q.gradeLevel === 6)).toBe(true);
+    expect(result.length).toBe(grade6Questions.length);
+  });
+
+  it('gradeLevels:[5] 필터는 gradeLevel 미설정 문항(5학년으로 간주)을 포함하고 6학년 문항을 제외한다', () => {
+    const result = filterQuestions({ gradeLevels: [5] });
+    expect(result.every(q => (q.gradeLevel ?? 5) === 5)).toBe(true);
+    expect(result.some(q => q.gradeLevel === 6)).toBe(false);
+  });
+
+  it('gradeLevels:[5,6] 필터는 5학년과 6학년 문항을 모두 포함한다', () => {
+    const result = filterQuestions({ gradeLevels: [5, 6] });
+    expect(result.some(q => (q.gradeLevel ?? 5) === 5)).toBe(true);
+    expect(result.some(q => q.gradeLevel === 6)).toBe(true);
+  });
+
+  it('6학년 + unitId:1 필터는 단원1 6학년 문항만 반환한다', () => {
+    const result = filterQuestions({ unitIds: [1], gradeLevels: [6] });
+    expect(result.every(q => q.unitId === 1 && q.gradeLevel === 6)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('[6과15-05] 성취기준 코드는 6학년 문항과 연결된다', () => {
+    const result = filterQuestions({ standardCodes: ['[6과15-05]'] });
+    expect(result.some(q => q.gradeLevel === 6)).toBe(true);
   });
 });

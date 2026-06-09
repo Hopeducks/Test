@@ -31,6 +31,16 @@ export const standards: AchievementStandard[] = [
     statement: '표준화석과 시상화석의 차이를 구분하고, 화석 연구가 과학 발전에 미친 영향을 설명할 수 있다.',
   },
 
+  // ── Unit 1: 지층과 화석 6학년 심화 (지구와 우주) ─────────────────────
+  {
+    code: '[6과15-05]', gradeBand: '5-6', gradeLevel: 6, unitId: 1, domain: '지구와 우주',
+    statement: '화성암·퇴적암·변성암이 서로 변하는 암석 순환 과정을 이해하고 지구 내부 에너지와의 관계를 설명할 수 있다.',
+  },
+  {
+    code: '[6과15-06]', gradeBand: '5-6', gradeLevel: 6, unitId: 1, domain: '지구와 우주',
+    statement: '습곡과 단층의 형성 원인을 이해하고, 지각 변동이 만들어낸 다양한 지형을 설명할 수 있다.',
+  },
+
   // ── Unit 2: 빛과 렌즈 (운동과 에너지) ─────────────────────────────────
   {
     code: '[6과08-01]', gradeBand: '5-6', gradeLevel: 5, unitId: 2, domain: '운동과 에너지',
@@ -47,6 +57,15 @@ export const standards: AchievementStandard[] = [
   {
     code: '[6과08-04]', gradeBand: '5-6', gradeLevel: 5, unitId: 2, domain: '운동과 에너지',
     statement: '렌즈가 활용된 기구를 알고, 볼록렌즈와 오목렌즈의 활용 사례를 설명할 수 있다.',
+  },
+  // ── Unit 2: 빛과 렌즈 6학년 심화 (운동과 에너지) ──────────────────────
+  {
+    code: '[6과08-05]', gradeBand: '5-6', gradeLevel: 6, unitId: 2, domain: '운동과 에너지',
+    statement: '빛의 분산(프리즘)과 색의 합성 원리를 이해하고, 무지개가 생기는 과정을 설명할 수 있다.',
+  },
+  {
+    code: '[6과08-06]', gradeBand: '5-6', gradeLevel: 6, unitId: 2, domain: '운동과 에너지',
+    statement: '광학 기기(망원경, 현미경, 사진기)의 구조와 렌즈 활용 원리를 설명할 수 있다.',
   },
 
   // ── Unit 3: 용액의 성질 (물질) ────────────────────────────────────────

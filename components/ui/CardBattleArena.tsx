@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameState, getAttackMultiplier } from '../../lib/game-state';
 import { cards } from '../../data/cards';
-import { questions, getUnitQuestions } from '../../data/questions';
+import { questions } from '../../data/questions';
+import { selectQuestions } from '../../lib/question-pool';
 import { costumeCatalog } from '../../data/costume-catalog';
 import { gameAudio } from '../../lib/audio';
 import { supabase } from '../../lib/supabase-client';
@@ -385,9 +386,17 @@ export default function CardBattleArena({ onBack }: CardBattleArenaProps) {
         setRoundPhase('quiz');
         setRoundTimer(10);
 
-        // Setup quiz question
-        const unitQuestions = getUnitQuestions(1); // Fallback to Unit 1 questions
-        const randomQ = unitQuestions[Math.floor(Math.random() * unitQuestions.length)] || questions[0];
+        // Setup quiz question — use active session filter (D6: no more hardcoded unit 1)
+        const unitId = classroomSession?.activeUnitId ?? 1;
+        const { questions: battlePool } = selectQuestions({
+          unitIds: [unitId],
+          standardCodes: classroomSession?.selectedStandardCodes,
+          gradeLevels: classroomSession?.gradeFilter,
+          difficulties: classroomSession?.difficultyFilter,
+          count: 20,
+        });
+        const pool = battlePool.length > 0 ? battlePool : questions;
+        const randomQ = pool[Math.floor(Math.random() * pool.length)];
         setQuizQuestion(randomQ);
       } else if (roundPhase === 'quiz') {
         // Time out quiz answer
