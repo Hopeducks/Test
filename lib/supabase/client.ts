@@ -196,7 +196,6 @@ const mockSupabase = {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
   },
   rpc: (fn: string, params: any) => {
-    console.log(`Mock RPC call to ${fn}:`, params);
     if (fn === 'set_session_context') {
       if (typeof window !== 'undefined') {
         localStorage.setItem('app.session_code', params.session_code || '');

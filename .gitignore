@@ -41,3 +41,9 @@ supabase/config.toml.local
 # Playwright artifacts
 /test-results/
 /playwright-report/
+
+# 일회성 개발 스크립트 (추적 제외)
+/scratch/
+
+# Vitest 커버리지 산출물
+/coverage/
