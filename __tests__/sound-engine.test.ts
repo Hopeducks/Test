@@ -173,4 +173,38 @@ describe('SoundSynthesizer — new methods', () => {
   it('playClick does not throw', () => {
     expect(() => gameAudio.playClick()).not.toThrow();
   });
+
+  // ── capture minigame sounds ─────────────────────────────────────────────────
+  it('playThrow plays a tone', () => {
+    gameAudio.playThrow();
+    expect(mockStart).toHaveBeenCalled();
+  });
+
+  it('playThrow does nothing when muted', () => {
+    mockSoundOn = false;
+    gameAudio.playThrow();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
+  it('playCatchSuccess plays an ascending arpeggio', () => {
+    gameAudio.playCatchSuccess();
+    expect(mockStart).toHaveBeenCalled();
+  });
+
+  it('playCatchSuccess does nothing when muted', () => {
+    mockSoundOn = false;
+    gameAudio.playCatchSuccess();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
+  it('playCatchFail plays a descending tone', () => {
+    gameAudio.playCatchFail();
+    expect(mockStart).toHaveBeenCalled();
+  });
+
+  it('playCatchFail does nothing when muted', () => {
+    mockSoundOn = false;
+    gameAudio.playCatchFail();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
 });
