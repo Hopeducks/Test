@@ -1,16 +1,18 @@
 # 다음 세션 인수인계 (Handoff)
 
-> 마지막 업데이트: 2026-06-08 · 브랜치 `main`
+> 마지막 업데이트: 2026-06-10 · 브랜치 `main`
 
 ## 현재 상태 한 줄 요약
-**Phase H1·H3·I2 완료.** 전부 그린(tsc·단위30·빌드·E2E17). 다음은 추가 접근성 심화 또는 성능 최적화.
+**PRD F4·F7·F8 전 Phase 완료 + P1(커버리지) 완료.** 전부 그린(tsc·단위346·빌드196kB·E2E36·lint클린).
+단위 커버리지 Stmts 84%·Lines 85%(규칙 80% 충족). 다음 우선순위는 `BACKLOG.md` 참고 — P2~P4.
 
 ## 검증 명령 (작업 전후 항상 실행)
 ```bash
 npx tsc --noEmit        # 타입 체크
-npm test                # Vitest 단위 30개
-npm run build           # 정적 빌드(output: export)
-npm run test:e2e        # Playwright E2E 17개 (크로미움 설치 필요시 아래 참고)
+npm test                # Vitest 단위 346개
+npm run build           # 정적 빌드(output: export, ≤200 kB)
+npm run test:e2e        # Playwright E2E 36개 (크로미움 설치 필요시 아래 참고)
+npm run lint            # ESLint 클린
 ```
 - Playwright 브라우저 미설치 시: `NODE_TLS_REJECT_UNAUTHORIZED=0 npx playwright install chromium`
   (회사망 self-signed 인증서 우회 — 이 환경 특이사항)
